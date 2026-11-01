@@ -9,7 +9,8 @@ import {
   FileCode, 
   FileArchive, 
   MoreVertical, 
-  Star 
+  Star,
+  Music 
 } from "lucide-react";
 import { AirShareFile, AirShareFolder } from "../../lib/types";
 
@@ -48,7 +49,14 @@ export default function FileGrid({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type: string, ext: string = "") => {
+    const e = ext.toLowerCase();
+    if (type === "audio" || ["mp3", "wav", "flac", "ogg", "m4a", "aac"].includes(e)) {
+      return <Music className="w-8 h-8 text-amber-400" />;
+    }
+    if (type === "code" || ["json", "html", "htm", "bat", "cmd", "py", "js", "ts", "tsx", "jsx", "css"].includes(e)) {
+      return <FileCode className="w-8 h-8 text-cyan-400" />;
+    }
     switch (type) {
       case "image":
         return <ImageIcon className="w-8 h-8 text-emerald-400" />;
@@ -139,7 +147,7 @@ export default function FileGrid({
                 >
                   {/* Thumbnail / Icon Container */}
                   <div className="h-32 bg-slate-900/50 flex items-center justify-center relative border-b border-slate-700/40">
-                    {getFileIcon(file.fileType)}
+                    {getFileIcon(file.fileType, file.extension)}
 
                     {file.isStarred && (
                       <Star className="w-4 h-4 text-amber-400 fill-amber-400 absolute top-2 left-2" />

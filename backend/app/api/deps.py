@@ -32,6 +32,21 @@ async def get_current_user(
 
     # 2. Preview Token (For embedded viewers, video src tags, PDF iframes)
     if preview_token:
+        # Check if preview_token is a Firebase ID Token (JWT has 2 dots)
+        if preview_token.count(".") == 2:
+            try:
+                user_info = verify_firebase_id_token(preview_token)
+                return {
+                    "uid": user_info["uid"],
+                    "email": user_info.get("email", ""),
+                    "name": user_info.get("name", "User"),
+                    "picture": user_info.get("picture", ""),
+                    "auth_type": "bearer"
+                }
+            except Exception:
+                pass
+
+        # Otherwise verify as HMAC signed preview token
         try:
             payload = verify_signed_preview_token(preview_token)
             return {

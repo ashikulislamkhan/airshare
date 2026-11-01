@@ -79,6 +79,7 @@ class ChunkEngine:
         client = await telegram_manager.get_client()
         current_request_offset = start_byte
         remaining_bytes_to_serve = (end_byte - start_byte) + 1
+        entity_cache: Dict[int, Any] = {}
 
         for chunk in chunks:
             chunk_start = chunk["startByte"]
@@ -103,8 +104,12 @@ class ChunkEngine:
                 f"offset={chunk_internal_offset}, length={bytes_to_read_from_chunk}"
             )
 
-            # Retrieve Telegram message document
-            msg = await client.get_messages(channel_id, ids=msg_id)
+            # Retrieve Telegram message document with resolved entity
+            if channel_id not in entity_cache:
+                entity_cache[channel_id] = await client.get_entity(channel_id)
+            target_entity = entity_cache[channel_id]
+
+            msg = await client.get_messages(target_entity, ids=msg_id)
             if not msg or not msg.document:
                 raise RuntimeError(f"Telegram chunk message {msg_id} not found in channel {channel_id}")
 
@@ -129,11 +134,17 @@ class ChunkEngine:
         Zero disk storage on Cloud Run; purely pipelined MTProto byte stream.
         """
         client = await telegram_manager.get_client()
+        entity_cache: Dict[int, Any] = {}
+
         for chunk in chunks:
             channel_id = chunk["telegramChannelId"]
             msg_id = chunk["telegramMessageId"]
             
-            msg = await client.get_messages(channel_id, ids=msg_id)
+            if channel_id not in entity_cache:
+                entity_cache[channel_id] = await client.get_entity(channel_id)
+            target_entity = entity_cache[channel_id]
+
+            msg = await client.get_messages(target_entity, ids=msg_id)
             if not msg or not msg.document:
                 raise RuntimeError(f"Telegram chunk message {msg_id} not found")
 

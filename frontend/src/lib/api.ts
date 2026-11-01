@@ -122,10 +122,20 @@ export const api = {
   },
 
   async getPreviewToken(fileId: string): Promise<string> {
-    const res = await fetchWithAuth(`/files/${fileId}/preview-token`);
-    if (!res.ok) throw new Error("Failed to get preview token");
-    const data = await res.json();
-    return data.token;
+    try {
+      const res = await fetchWithAuth(`/files/${fileId}/preview-token`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.token) return data.token;
+      }
+    } catch (e) {
+      console.warn("getPreviewToken endpoint failed, falling back to Firebase token", e);
+    }
+    const user = auth.currentUser;
+    if (user) {
+      return await user.getIdToken();
+    }
+    return "";
   },
 
   getStreamUrl(fileId: string, token?: string, download: boolean = false): string {

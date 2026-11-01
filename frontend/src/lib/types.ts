@@ -27,7 +27,7 @@ export interface AirShareFile {
   name: string;
   extension: string;
   mimeType: string;
-  fileType: "image" | "video" | "pdf" | "office" | "text" | "other";
+  fileType: "image" | "video" | "audio" | "pdf" | "office" | "text" | "code" | "other";
   totalSizeBytes: number;
   md5Checksum?: string;
   folderId: string | null;

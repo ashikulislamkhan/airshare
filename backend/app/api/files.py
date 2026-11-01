@@ -29,15 +29,20 @@ class FileMetadataUpdate(BaseModel):
     isStarred: Optional[bool] = None
 
 def detect_file_type(mime: str, ext: str) -> str:
-    if mime.startswith("image/"):
+    ext = ext.lower().lstrip(".")
+    if mime.startswith("image/") or ext in ("png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "avif"):
         return "image"
-    if mime.startswith("video/") or mime.startswith("audio/"):
+    if mime.startswith("audio/") or ext in ("mp3", "wav", "ogg", "flac", "m4a", "aac", "opus", "wma"):
+        return "audio"
+    if mime.startswith("video/") or ext in ("mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v"):
         return "video"
     if "pdf" in mime or ext == "pdf":
         return "pdf"
     if ext in ("doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv"):
         return "office"
-    if mime.startswith("text/") or ext in ("txt", "md", "json", "js", "ts", "py", "html", "css"):
+    if ext in ("html", "htm", "json", "bat", "cmd", "ps1", "sh", "py", "js", "ts", "tsx", "jsx", "css", "scss", "sql", "xml", "yaml", "yml", "md", "txt", "log", "env", "ini", "toml", "c", "cpp", "h", "java", "rs", "go", "php"):
+        return "code" if ext not in ("txt", "log", "env") else "text"
+    if mime.startswith("text/"):
         return "text"
     return "other"
 
@@ -163,11 +168,60 @@ async def stream_or_download_file(
 
     content_type = file_record.get("mimeType", "application/octet-stream")
     filename = file_record.get("name", "file")
+    ext = filename.split(".")[-1].lower() if "." in filename else ""
+
+    MIME_MAP = {
+        "mp4": "video/mp4",
+        "mkv": "video/mp4",
+        "webm": "video/webm",
+        "mov": "video/quicktime",
+        "mp3": "audio/mpeg",
+        "wav": "audio/wav",
+        "ogg": "audio/ogg",
+        "flac": "audio/flac",
+        "m4a": "audio/mp4",
+        "aac": "audio/aac",
+        "pdf": "application/pdf",
+        "json": "application/json",
+        "txt": "text/plain; charset=utf-8",
+        "log": "text/plain; charset=utf-8",
+        "bat": "text/plain; charset=utf-8",
+        "cmd": "text/plain; charset=utf-8",
+        "ps1": "text/plain; charset=utf-8",
+        "sh": "text/plain; charset=utf-8",
+        "py": "text/plain; charset=utf-8",
+        "js": "text/javascript; charset=utf-8",
+        "ts": "text/plain; charset=utf-8",
+        "tsx": "text/plain; charset=utf-8",
+        "jsx": "text/plain; charset=utf-8",
+        "css": "text/css; charset=utf-8",
+        "html": "text/html; charset=utf-8",
+        "htm": "text/html; charset=utf-8",
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "svg": "image/svg+xml",
+        "webp": "image/webp",
+        "csv": "text/csv; charset=utf-8",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    }
+    if ext in MIME_MAP:
+        content_type = MIME_MAP[ext]
+    elif not content_type or content_type == "application/octet-stream":
+        guessed = mimetypes.guess_type(filename)[0]
+        if guessed:
+            content_type = guessed
 
     disposition = "attachment" if download else "inline"
     base_headers = {
         "Accept-Ranges": "bytes",
-        "Content-Disposition": f'{disposition}; filename="{filename}"'
+        "Content-Disposition": f'{disposition}; filename="{filename}"',
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
     }
 
     # Case 1: HTTP Range Request (HTTP 206 Partial Content)

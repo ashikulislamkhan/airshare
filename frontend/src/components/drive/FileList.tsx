@@ -10,7 +10,8 @@ import {
   FileArchive, 
   MoreVertical, 
   Star,
-  ArrowUpDown 
+  ArrowUpDown,
+  Music 
 } from "lucide-react";
 import { AirShareFile, AirShareFolder } from "../../lib/types";
 
@@ -61,7 +62,14 @@ export default function FileList({
     });
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type: string, ext: string = "") => {
+    const e = ext.toLowerCase();
+    if (type === "audio" || ["mp3", "wav", "flac", "ogg", "m4a", "aac"].includes(e)) {
+      return <Music className="w-4 h-4 text-amber-400" />;
+    }
+    if (type === "code" || ["json", "html", "htm", "bat", "cmd", "py", "js", "ts", "tsx", "jsx", "css"].includes(e)) {
+      return <FileCode className="w-4 h-4 text-cyan-400" />;
+    }
     switch (type) {
       case "image":
         return <ImageIcon className="w-4 h-4 text-emerald-400" />;
@@ -148,7 +156,7 @@ export default function FileList({
                 }`}
               >
                 <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
-                  {getFileIcon(file.fileType)}
+                  {getFileIcon(file.fileType, file.extension)}
                   <span className="truncate max-w-sm">{file.name}</span>
                   {file.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
                 </td>
