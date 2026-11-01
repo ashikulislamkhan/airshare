@@ -113,16 +113,30 @@ class ChunkEngine:
             if not msg or not msg.document:
                 raise RuntimeError(f"Telegram chunk message {msg_id} not found in channel {channel_id}")
 
-            # Stream slice using Telethon's iter_download (64KB chunks to client)
             bytes_streamed_from_chunk = 0
-            async for data in client.iter_download(
-                msg.document,
-                offset=chunk_internal_offset,
-                limit=bytes_to_read_from_chunk,
-                chunk_size=65536
-            ):
-                yield data
-                bytes_streamed_from_chunk += len(data)
+            # Align offset to 4KB (Telegram MTProto requirement for partial downloads)
+            aligned_offset = (chunk_internal_offset // 4096) * 4096
+            skip_bytes = chunk_internal_offset - aligned_offset
+
+            async for data in client.iter_download(msg.document, offset=aligned_offset):
+                if skip_bytes > 0:
+                    if len(data) <= skip_bytes:
+                        skip_bytes -= len(data)
+                        continue
+                    else:
+                        data = data[skip_bytes:]
+                        skip_bytes = 0
+
+                needed = bytes_to_read_from_chunk - bytes_streamed_from_chunk
+                if needed <= 0:
+                    break
+                if len(data) > needed:
+                    yield data[:needed]
+                    bytes_streamed_from_chunk += needed
+                    break
+                else:
+                    yield data
+                    bytes_streamed_from_chunk += len(data)
 
             current_request_offset += bytes_streamed_from_chunk
             remaining_bytes_to_serve -= bytes_streamed_from_chunk
@@ -148,5 +162,5 @@ class ChunkEngine:
             if not msg or not msg.document:
                 raise RuntimeError(f"Telegram chunk message {msg_id} not found")
 
-            async for data in client.iter_download(msg.document, chunk_size=131072):
+            async for data in client.iter_download(msg.document):
                 yield data

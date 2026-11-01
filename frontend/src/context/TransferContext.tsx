@@ -87,7 +87,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       totalBytes: file.size,
       speedBytesPerSec: 0,
       status: "queued",
-      chunksTotal: Math.max(1, Math.ceil(file.size / 2039480320)),
+      chunksTotal: Math.max(1, Math.ceil(file.size / 52428800)),
       chunksUploaded: 0,
     }));
 

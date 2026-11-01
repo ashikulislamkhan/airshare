@@ -146,6 +146,50 @@ async def upload_chunk(
 
     return {"status": "success", "chunk": chunk_data}
 
+@router.get("/debug/stream-test/{file_id}")
+async def debug_stream_test(file_id: str):
+    import traceback
+    try:
+        file_record = await firestore_db.get_file(file_id)
+        if not file_record:
+            return {"error": "File record not found"}
+        chunks = await firestore_db.get_file_chunks(file_record["activeVersionId"])
+        if not chunks:
+            return {"error": "Chunks not found"}
+        
+        client = await telegram_manager.get_client()
+        channel_id = chunks[0]["telegramChannelId"]
+        msg_id = chunks[0]["telegramMessageId"]
+        
+        try:
+            target_entity = await client.get_entity(channel_id)
+        except Exception as ee:
+            return {"error": f"Failed to get_entity({channel_id}): {ee}", "traceback": traceback.format_exc()}
+            
+        msg = await client.get_messages(target_entity, ids=msg_id)
+        if not msg:
+            return {"error": f"Message {msg_id} not found in channel {channel_id}"}
+        if not msg.document:
+            return {"error": f"Message {msg_id} has no document (media: {type(getattr(msg, 'media', None))})"}
+            
+        first_chunk_len = 0
+        async for b in client.iter_download(msg.document):
+            first_chunk_len = len(b)
+            break
+            
+        return {
+            "status": "success",
+            "file_name": file_record["name"],
+            "doc_size": msg.document.size,
+            "first_chunk_len": first_chunk_len
+        }
+    except Exception as e:
+        return {
+            "status": "exception",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
 @router.get("/{file_id}/stream")
 async def stream_or_download_file(
     file_id: str,

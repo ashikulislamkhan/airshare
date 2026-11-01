@@ -112,6 +112,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const [mediaError, setMediaError] = useState<string | null>(null);
 
   // Video player state
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -176,6 +177,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
     setVideoSpeed(1.0);
     setAudioSpeed(1.0);
     setVideoQuality("highest");
+    setMediaError(null);
 
     let isSubscribed = true;
 
@@ -719,23 +721,44 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
           <>
             {/* 1. IMAGE VIEWER (Pan, Zoom, Rotate) */}
             {category === "image" && (
-              <div 
-                className="w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none"
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMoveImage}
-                onMouseUp={handleMouseUp}
-              >
-                <img
-                  src={streamUrl}
-                  alt={file.name}
-                  draggable={false}
-                  style={{
-                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,
-                    transition: isDragging ? "none" : "transform 0.2s cubic-bezier(0.2, 0, 0, 1)",
-                  }}
-                  className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl shadow-2xl pointer-events-auto"
-                />
-              </div>
+              mediaError ? (
+                <div className="flex flex-col items-center justify-center gap-3 text-slate-400 bg-slate-900/90 p-8 rounded-2xl border border-slate-800 text-center max-w-md shadow-2xl">
+                  <FileText className="w-12 h-12 text-amber-400" />
+                  <p className="text-sm font-semibold text-white">{mediaError}</p>
+                  <p className="text-xs text-slate-400">
+                    The backend might still be loading this image from Telegram storage or the file is still transferring.
+                  </p>
+                  {downloadUrl && (
+                    <a
+                      href={downloadUrl}
+                      download={file.name}
+                      className="mt-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow shadow-blue-500/20"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Image</span>
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div 
+                  className="w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none"
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMoveImage}
+                  onMouseUp={handleMouseUp}
+                >
+                  <img
+                    src={streamUrl}
+                    alt={file.name}
+                    draggable={false}
+                    onError={() => setMediaError("Unable to load image stream from Telegram.")}
+                    style={{
+                      transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom}) rotate(${rotation}deg)`,
+                      transition: isDragging ? "none" : "transform 0.2s cubic-bezier(0.2, 0, 0, 1)",
+                    }}
+                    className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl shadow-2xl pointer-events-auto"
+                  />
+                </div>
+              )
             )}
 
             {/* 2. VIDEO PLAYER (Lossless, Seeking, Speed, Quality, Fullscreen, Cast) */}
@@ -753,6 +776,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                     src={streamUrl}
                     playsInline
                     preload="metadata"
+                    onError={() => setMediaError("Unable to load video stream from Telegram.")}
                     onClick={toggleVideoPlay}
                     onDoubleClick={toggleFullscreen}
                     onTimeUpdate={() => {
@@ -959,6 +983,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                   src={streamUrl}
                   loop={audioLoop}
                   preload="metadata"
+                  onError={() => setMediaError("Unable to load audio stream from Telegram.")}
                   onTimeUpdate={() => {
                     if (audioRef.current) setAudioCurrentTime(audioRef.current.currentTime);
                   }}

@@ -1,8 +1,8 @@
 import { getFirebaseIdToken } from "./firebase";
 import { api } from "./api";
 
-// 1.90 GB (1,945 MB) chunk limit matching Telegram MTProto free tier ceiling
-export const MAX_CHUNK_SIZE_BYTES = 2039480320; 
+// 50 MB chunk limit: ensures uploads never hit proxy timeouts and increment smoothly
+export const MAX_CHUNK_SIZE_BYTES = 52428800; // 50 MB 
 
 // Transfer chunk slice size (can be tuned for network resilience: 50MB - 100MB slices)
 export const UPLOAD_SLICE_SIZE = 50 * 1024 * 1024; // 50 MB

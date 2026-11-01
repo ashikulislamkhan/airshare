@@ -39,8 +39,9 @@ class Settings(BaseSettings):
     TELEGRAM_STORAGE_CHANNELS: str = ""
     
     # Chunking & Streaming Limits
-    # 1.90 GB (1,945 MB) safe buffer below Telegram's 2,000 MiB free MTProto ceiling
-    MAX_CHUNK_SIZE_BYTES: int = 2039480320 
+    # 50 MB per chunk: ensures uploads never hit reverse proxy timeouts (Cloudflare 100s / Render 100s),
+    # fits easily inside Render 512MB RAM bounds, and allows smooth dynamic progress increments.
+    MAX_CHUNK_SIZE_BYTES: int = 52428800  # 50 MB
     STREAM_BUFFER_SIZE_BYTES: int = 524288  # 512 KB per MTProto part
     
     # Security & Previews
