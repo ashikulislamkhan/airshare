@@ -19,13 +19,18 @@ def init_firebase():
     global _firebase_initialized
     if not _firebase_initialized:
         try:
-            cred_path = settings.resolved_credentials_path
-            if cred_path and os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
+            if settings.FIREBASE_SERVICE_ACCOUNT_JSON:
+                cert_dict = json.loads(settings.FIREBASE_SERVICE_ACCOUNT_JSON)
+                cred = credentials.Certificate(cert_dict)
                 firebase_admin.initialize_app(cred, {"projectId": settings.GCP_PROJECT_ID or None})
             else:
-                # Default application credentials (on Cloud Run)
-                firebase_admin.initialize_app(options={"projectId": settings.GCP_PROJECT_ID or None})
+                cred_path = settings.resolved_credentials_path
+                if cred_path and os.path.exists(cred_path):
+                    cred = credentials.Certificate(cred_path)
+                    firebase_admin.initialize_app(cred, {"projectId": settings.GCP_PROJECT_ID or None})
+                else:
+                    # Default application credentials (on Cloud Run)
+                    firebase_admin.initialize_app(options={"projectId": settings.GCP_PROJECT_ID or None})
             _firebase_initialized = True
             logger.info("Firebase Admin SDK initialized successfully.")
         except Exception as e:

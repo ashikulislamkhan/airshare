@@ -12,15 +12,23 @@ class FirestoreDB:
     _instance: Optional["FirestoreDB"] = None
 
     def __init__(self):
-        # Initializes Firestore client with credentials if provided, or default ADC
-        cred_path = settings.resolved_credentials_path
-        if cred_path and os.path.exists(cred_path):
-            self.db = firestore.AsyncClient.from_service_account_json(
-                cred_path,
+        # Initializes Firestore client with JSON string, file path, or default ADC
+        if settings.FIREBASE_SERVICE_ACCOUNT_JSON:
+            import json
+            cert_dict = json.loads(settings.FIREBASE_SERVICE_ACCOUNT_JSON)
+            self.db = firestore.AsyncClient.from_service_account_info(
+                cert_dict,
                 project=settings.GCP_PROJECT_ID or None
             )
         else:
-            self.db = firestore.AsyncClient(project=settings.GCP_PROJECT_ID or None)
+            cred_path = settings.resolved_credentials_path
+            if cred_path and os.path.exists(cred_path):
+                self.db = firestore.AsyncClient.from_service_account_json(
+                    cred_path,
+                    project=settings.GCP_PROJECT_ID or None
+                )
+            else:
+                self.db = firestore.AsyncClient(project=settings.GCP_PROJECT_ID or None)
 
     @classmethod
     def get_instance(cls) -> "FirestoreDB":

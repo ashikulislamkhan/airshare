@@ -26,7 +26,8 @@ class Settings(BaseSettings):
 
     # Google Cloud / Firebase
     GCP_PROJECT_ID: str = ""
-    FIREBASE_CREDENTIALS_PATH: str = ""  # If empty, uses GCP Default Application Credentials (Cloud Run)
+    FIREBASE_CREDENTIALS_PATH: str = ""  # Path to serviceAccountKey.json
+    FIREBASE_SERVICE_ACCOUNT_JSON: str = ""  # Raw JSON content of serviceAccountKey.json (for Render/Heroku/Vercel)
     
     # Telegram MTProto Configuration
     TELEGRAM_API_ID: int = 0
