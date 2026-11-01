@@ -13,11 +13,13 @@ import {
   Music 
 } from "lucide-react";
 import { AirShareFile, AirShareFolder } from "../../lib/types";
+import { api } from "../../lib/api";
 
 interface FileGridProps {
   folders: AirShareFolder[];
   files: AirShareFile[];
   selectedIds?: Set<string>;
+  token?: string;
   onFolderClick: (folder: AirShareFolder) => void;
   onFileClick: (file: AirShareFile) => void;
   onItemSelect?: (
@@ -32,10 +34,56 @@ interface FileGridProps {
   ) => void;
 }
 
+function FileThumbnail({
+  file,
+  token,
+  fallback,
+}: {
+  file: AirShareFile;
+  token?: string;
+  fallback: React.ReactNode;
+}) {
+  const [loaded, setLoaded] = React.useState(false);
+  const [hasError, setHasError] = React.useState(false);
+
+  const ext = (file.extension || "").toLowerCase();
+  const isImage = file.fileType === "image" || ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "avif"].includes(ext);
+
+  if (!isImage || !token || hasError) {
+    return <div className="flex items-center justify-center w-full h-full">{fallback}</div>;
+  }
+
+  const streamUrl = api.getStreamUrl(file.id, token, false);
+
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-slate-950 flex items-center justify-center">
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          {fallback}
+        </div>
+      )}
+      <img
+        src={streamUrl}
+        alt={file.name}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        onError={() => setHasError(true)}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      {loaded && (
+        <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+      )}
+    </div>
+  );
+}
+
 export default function FileGrid({
   folders,
   files,
   selectedIds = new Set(),
+  token,
   onFolderClick,
   onFileClick,
   onItemSelect,
@@ -146,8 +194,12 @@ export default function FileGrid({
                   }`}
                 >
                   {/* Thumbnail / Icon Container */}
-                  <div className="h-32 bg-slate-900/50 flex items-center justify-center relative border-b border-slate-700/40">
-                    {getFileIcon(file.fileType, file.extension)}
+                  <div className="h-32 bg-slate-900/50 flex items-center justify-center relative border-b border-slate-700/40 overflow-hidden">
+                    <FileThumbnail
+                      file={file}
+                      token={token}
+                      fallback={getFileIcon(file.fileType, file.extension)}
+                    />
 
                     {file.isStarred && (
                       <Star className="w-4 h-4 text-amber-400 fill-amber-400 absolute top-2 left-2" />

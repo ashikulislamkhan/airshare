@@ -14,11 +14,13 @@ import {
   Music 
 } from "lucide-react";
 import { AirShareFile, AirShareFolder } from "../../lib/types";
+import { api } from "../../lib/api";
 
 interface FileListProps {
   folders: AirShareFolder[];
   files: AirShareFile[];
   selectedIds?: Set<string>;
+  token?: string;
   onFolderClick: (folder: AirShareFolder) => void;
   onFileClick: (file: AirShareFile) => void;
   onItemSelect?: (
@@ -37,6 +39,7 @@ export default function FileList({
   folders,
   files,
   selectedIds = new Set(),
+  token,
   onFolderClick,
   onFileClick,
   onItemSelect,
@@ -156,7 +159,19 @@ export default function FileList({
                 }`}
               >
                 <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
-                  {getFileIcon(file.fileType, file.extension)}
+                  {file.fileType === "image" && token ? (
+                    <img
+                      src={api.getStreamUrl(file.id, token, false)}
+                      alt=""
+                      loading="lazy"
+                      className="w-5 h-5 rounded object-cover flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    getFileIcon(file.fileType, file.extension)
+                  )}
                   <span className="truncate max-w-sm">{file.name}</span>
                   {file.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
                 </td>

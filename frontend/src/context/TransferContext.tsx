@@ -64,6 +64,11 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
             : t
         )
       );
+
+      // Notify drive page to auto-refresh newly uploaded file
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("airshare:upload-complete"));
+      }
     } catch (err: any) {
       console.error(`Upload error for ${task.file.name}:`, err);
       setUploadTasks((prev) =>

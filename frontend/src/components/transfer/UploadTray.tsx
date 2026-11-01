@@ -16,6 +16,7 @@ import { useTransfer } from "../../context/TransferContext";
 export default function UploadTray() {
   const { uploadTasks, clearCompletedUploads, pauseUpload, isTrayOpen, setIsTrayOpen } = useTransfer();
   const [minimized, setMinimized] = useState(false);
+  const [persistentSpeed, setPersistentSpeed] = useState<number>(0);
 
   if (uploadTasks.length === 0 || !isTrayOpen) return null;
 
@@ -40,6 +41,15 @@ export default function UploadTray() {
     .filter((t) => t.status === "uploading")
     .reduce((sum, t) => sum + (t.speedBytesPerSec || 0), 0);
 
+  // Keep speed display steady without flickering
+  React.useEffect(() => {
+    if (totalSpeed > 0) {
+      setPersistentSpeed(totalSpeed);
+    } else if (activeCount === 0) {
+      setPersistentSpeed(0);
+    }
+  }, [totalSpeed, activeCount]);
+
   return (
     <div className="fixed bottom-6 right-6 w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 select-none">
       {/* Header */}
@@ -55,9 +65,9 @@ export default function UploadTray() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {totalSpeed > 0 && (
-            <span className="text-emerald-400 font-mono text-xs font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              {formatSpeed(totalSpeed)}
+          {activeCount > 0 && persistentSpeed > 0 && (
+            <span className="text-emerald-400 font-mono text-xs font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 shadow-sm">
+              {formatSpeed(persistentSpeed)}
             </span>
           )}
           <button
@@ -88,11 +98,6 @@ export default function UploadTray() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {task.status === "uploading" && task.speedBytesPerSec > 0 && (
-                    <span className="text-emerald-400 font-mono text-[10px] font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                      {formatSpeed(task.speedBytesPerSec)}
-                    </span>
-                  )}
                   <span className="text-slate-400 text-[11px] whitespace-nowrap">
                     {task.status === "completed" && <span className="text-emerald-400 font-medium">Done</span>}
                     {task.status === "uploading" && (
@@ -118,17 +123,12 @@ export default function UploadTray() {
                 />
               </div>
 
-              {/* Sub-status & Speed */}
+              {/* Sub-status & Part progress */}
               <div className="flex items-center justify-between text-[11px] text-slate-400">
                 <span>
                   {formatBytes(task.uploadedBytes)} of {formatBytes(task.totalBytes)}
                   {task.chunksTotal > 1 && ` (Part ${task.chunksUploaded}/${task.chunksTotal})`}
                 </span>
-                {task.status === "uploading" && task.speedBytesPerSec > 0 && (
-                  <span className="text-indigo-400 font-medium">
-                    {formatSpeed(task.speedBytesPerSec)}
-                  </span>
-                )}
               </div>
 
               {task.status === "error" && task.errorMessage && (

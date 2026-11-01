@@ -57,6 +57,7 @@ export class DirectCloudRunUploader {
     let totalUploadedBytes = 0;
     let lastTime = Date.now();
     let bytesSinceLastTime = 0;
+    let smoothedSpeed = 0;
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
@@ -107,9 +108,9 @@ export class DirectCloudRunUploader {
 
                 const now = Date.now();
                 const timeElapsedSec = (now - lastTime) / 1000;
-                let speed = 0;
                 if (timeElapsedSec >= 0.5) {
-                  speed = (bytesSinceLastTime + delta) / timeElapsedSec;
+                  const instantSpeed = (bytesSinceLastTime + delta) / timeElapsedSec;
+                  smoothedSpeed = smoothedSpeed === 0 ? instantSpeed : 0.7 * smoothedSpeed + 0.3 * instantSpeed;
                   lastTime = now;
                   bytesSinceLastTime = 0;
                 } else {
@@ -121,7 +122,7 @@ export class DirectCloudRunUploader {
                     uploadedBytes: totalUploadedBytes,
                     totalBytes: totalSize,
                     percent: Math.min(99, Math.round((totalUploadedBytes / totalSize) * 100)),
-                    speedBytesPerSec: speed,
+                    speedBytesPerSec: smoothedSpeed,
                     currentChunkIndex: chunkIndex + 1,
                     totalChunks,
                   });
@@ -159,7 +160,7 @@ export class DirectCloudRunUploader {
               uploadedBytes: totalUploadedBytes,
               totalBytes: totalSize,
               percent: Math.round((totalUploadedBytes / totalSize) * 100),
-              speedBytesPerSec: 0,
+              speedBytesPerSec: smoothedSpeed,
               currentChunkIndex: chunkIndex + 1,
               totalChunks,
             });
