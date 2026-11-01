@@ -67,9 +67,9 @@ class FirestoreDB:
 
     async def update_user_storage(self, uid: str, delta_bytes: int):
         user_ref = self.db.collection("users").document(uid)
-        await user_ref.update({
+        await user_ref.set({
             "storageUsedBytes": firestore.Increment(delta_bytes)
-        })
+        }, merge=True)
 
     # ─────────────────────────────────────────────────────────────
     # FOLDERS (Virtual Nested Tree)

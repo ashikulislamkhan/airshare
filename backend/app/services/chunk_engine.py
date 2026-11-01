@@ -30,75 +30,40 @@ class ChunkEngine:
         channel_id: int
     ) -> Tuple[int, int]:
         """
-        Pipes an incoming HTTP byte stream directly to Telegram MTProto using 512 KB parts.
-        Zero RAM buffer: only 512 KB is held in memory at any instant.
-        Returns (telegram_message_id, telegram_file_id).
+        Streams an incoming HTTP chunk to a temporary file and uses Telethon's
+        optimized upload engine with automatic part sizing and channel entity resolution.
         """
-        client = await telegram_manager.get_client()
+        import tempfile
+        import aiofiles
 
-        # MTProto 512 KB part calculation
-        PART_SIZE = settings.STREAM_BUFFER_SIZE_BYTES  # 524,288 bytes
-        total_parts = math.ceil(chunk_size_bytes / PART_SIZE)
-        if total_parts > 4000:
-            raise ValueError(f"Chunk size {chunk_size_bytes} exceeds Telegram MTProto 4000-part limit.")
+        temp_fd, temp_path = tempfile.mkstemp(prefix="airshare_chunk_")
+        os.close(temp_fd)
 
-        file_id = random.randint(1, 2**63 - 1)
-        part_index = 0
-        buffer = bytearray()
+        try:
+            logger.info(f"Writing incoming chunk stream to temp file: {filename} ({chunk_size_bytes} bytes)")
+            async with aiofiles.open(temp_path, "wb") as f:
+                async for chunk in stream:
+                    await f.write(chunk)
 
-        logger.info(f"Starting MTProto streaming upload: {filename} ({chunk_size_bytes} bytes, {total_parts} parts)")
-
-        async for chunk in stream:
-            buffer.extend(chunk)
-            while len(buffer) >= PART_SIZE:
-                part_bytes = bytes(buffer[:PART_SIZE])
-                del buffer[:PART_SIZE]
-
-                # Save big file part directly to Telegram MTProto servers
-                await telegram_manager.execute_with_retry(
-                    lambda cl: cl(SaveBigFilePartRequest(
-                        file_id=file_id,
-                        file_part=part_index,
-                        file_total_parts=total_parts,
-                        bytes=part_bytes
-                    ))
+            async def _upload_op(cl: TelegramClient):
+                target_entity = await cl.get_entity(channel_id)
+                uploaded = await cl.upload_file(temp_path, file_name=filename)
+                msg = await cl.send_file(
+                    entity=target_entity,
+                    file=uploaded,
+                    caption=f"#AirShareChunk | {filename} | {chunk_size_bytes} bytes",
+                    force_document=True,
+                    attributes=[DocumentAttributeFilename(filename)]
                 )
-                part_index += 1
+                file_id = getattr(uploaded, "id", 0)
+                return msg.id, file_id
 
-        # Flush final remaining bytes
-        if len(buffer) > 0:
-            part_bytes = bytes(buffer)
-            buffer.clear()
-            await telegram_manager.execute_with_retry(
-                lambda cl: cl(SaveBigFilePartRequest(
-                    file_id=file_id,
-                    file_part=part_index,
-                    file_total_parts=total_parts,
-                    bytes=part_bytes
-                ))
-            )
-            part_index += 1
-
-        input_file = InputFileBig(
-            id=file_id,
-            parts=total_parts,
-            name=filename
-        )
-
-        # Post document to the target AirShare Storage Channel
-        async def _send_doc(cl: TelegramClient):
-            msg = await cl.send_file(
-                entity=channel_id,
-                file=input_file,
-                caption=f"#AirShareChunk | {filename} | {chunk_size_bytes} bytes",
-                force_document=True,
-                attributes=[DocumentAttributeFilename(filename)]
-            )
-            return msg.id
-
-        message_id = await telegram_manager.execute_with_retry(_send_doc)
-        logger.info(f"Chunk uploaded successfully to Telegram! Msg ID: {message_id} in Channel: {channel_id}")
-        return message_id, file_id
+            message_id, file_id = await telegram_manager.execute_with_retry(_upload_op)
+            logger.info(f"Chunk uploaded successfully to Telegram! Msg ID: {message_id} in Channel: {channel_id}")
+            return message_id, file_id
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     @staticmethod
     async def stream_byte_range_across_chunks(

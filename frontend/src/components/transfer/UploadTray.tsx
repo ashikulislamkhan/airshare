@@ -114,6 +114,12 @@ export default function UploadTray() {
                   </span>
                 )}
               </div>
+
+              {task.status === "error" && task.errorMessage && (
+                <p className="text-[10px] text-red-400 truncate pt-0.5" title={task.errorMessage}>
+                  {task.errorMessage}
+                </p>
+              )}
             </div>
           ))}
         </div>
