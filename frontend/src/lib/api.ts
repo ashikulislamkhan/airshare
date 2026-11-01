@@ -67,6 +67,19 @@ export const api = {
     return res.json();
   },
 
+  async getFolderPreviewToken(folderId: string): Promise<string> {
+    const res = await fetchWithAuth(`/folders/${folderId}/preview-token`);
+    if (!res.ok) throw new Error("Failed to get folder token");
+    const data = await res.json();
+    return data.token;
+  },
+
+  getFolderZipUrl(folderId: string, token?: string): string {
+    const url = new URL(`${API_BASE_URL}/folders/${folderId}/zip`);
+    if (token) url.searchParams.append("token", token);
+    return url.toString();
+  },
+
   // Files
   async listFiles(folderId: string | null = null, starred?: boolean): Promise<AirShareFile[]> {
     const params = new URLSearchParams();

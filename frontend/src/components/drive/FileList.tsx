@@ -17,8 +17,14 @@ import { AirShareFile, AirShareFolder } from "../../lib/types";
 interface FileListProps {
   folders: AirShareFolder[];
   files: AirShareFile[];
+  selectedIds?: Set<string>;
   onFolderClick: (folder: AirShareFolder) => void;
   onFileClick: (file: AirShareFile) => void;
+  onItemSelect?: (
+    e: React.MouseEvent,
+    target: AirShareFile | AirShareFolder,
+    type: "file" | "folder"
+  ) => void;
   onContextMenu: (
     e: React.MouseEvent,
     target: AirShareFile | AirShareFolder,
@@ -29,8 +35,10 @@ interface FileListProps {
 export default function FileList({
   folders,
   files,
+  selectedIds = new Set(),
   onFolderClick,
   onFileClick,
+  onItemSelect,
   onContextMenu,
 }: FileListProps) {
   const [sortField, setSortField] = useState<"name" | "size" | "updated">("name");
@@ -84,69 +92,83 @@ export default function FileList({
         </thead>
         <tbody className="divide-y divide-slate-800/40">
           {/* Folders */}
-          {folders.map((folder) => (
-            <tr
-              key={folder.id}
-              onDoubleClick={() => onFolderClick(folder)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                onContextMenu(e, folder, "folder");
-              }}
-              className="hover:bg-slate-800/50 cursor-pointer transition group"
-            >
-              <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
-                <Folder className="w-4 h-4 text-amber-400 fill-amber-400/20 flex-shrink-0" />
-                <span className="truncate max-w-sm">{folder.name}</span>
-              </td>
-              <td className="py-2.5 px-3 text-slate-400">Folder</td>
-              <td className="py-2.5 px-3 text-slate-400">—</td>
-              <td className="py-2.5 px-3 text-slate-400">{formatDate(folder.updatedAt)}</td>
-              <td className="py-2.5 px-3 text-right">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onContextMenu(e, folder, "folder");
-                  }}
-                  className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition"
-                >
-                  <MoreVertical className="w-3.5 h-3.5" />
-                </button>
-              </td>
-            </tr>
-          ))}
+          {folders.map((folder) => {
+            const isSelected = selectedIds.has(folder.id);
+            return (
+              <tr
+                key={folder.id}
+                data-selectable-id={folder.id}
+                onClick={(e) => onItemSelect?.(e, folder, "folder")}
+                onDoubleClick={() => onFolderClick(folder)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  onContextMenu(e, folder, "folder");
+                }}
+                className={`cursor-pointer transition group border-b border-slate-800/20 ${
+                  isSelected ? "bg-blue-600/30 font-semibold" : "hover:bg-slate-800/50"
+                }`}
+              >
+                <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
+                  <Folder className="w-4 h-4 text-amber-400 fill-amber-400/20 flex-shrink-0" />
+                  <span className="truncate max-w-sm">{folder.name}</span>
+                </td>
+                <td className="py-2.5 px-3 text-slate-400">Folder</td>
+                <td className="py-2.5 px-3 text-slate-400">—</td>
+                <td className="py-2.5 px-3 text-slate-400">{formatDate(folder.updatedAt)}</td>
+                <td className="py-2.5 px-3 text-right">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onContextMenu(e, folder, "folder");
+                    }}
+                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
 
           {/* Files */}
-          {files.map((file) => (
-            <tr
-              key={file.id}
-              onDoubleClick={() => onFileClick(file)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                onContextMenu(e, file, "file");
-              }}
-              className="hover:bg-slate-800/50 cursor-pointer transition group"
-            >
-              <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
-                {getFileIcon(file.fileType)}
-                <span className="truncate max-w-sm">{file.name}</span>
-                {file.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
-              </td>
-              <td className="py-2.5 px-3 text-slate-400 uppercase font-mono">{file.extension || "FILE"}</td>
-              <td className="py-2.5 px-3 text-slate-400">{formatBytes(file.totalSizeBytes)}</td>
-              <td className="py-2.5 px-3 text-slate-400">{formatDate(file.updatedAt)}</td>
-              <td className="py-2.5 px-3 text-right">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onContextMenu(e, file, "file");
-                  }}
-                  className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition"
-                >
-                  <MoreVertical className="w-3.5 h-3.5" />
-                </button>
-              </td>
-            </tr>
-          ))}
+          {files.map((file) => {
+            const isSelected = selectedIds.has(file.id);
+            return (
+              <tr
+                key={file.id}
+                data-selectable-id={file.id}
+                onClick={(e) => onItemSelect?.(e, file, "file")}
+                onDoubleClick={() => onFileClick(file)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  onContextMenu(e, file, "file");
+                }}
+                className={`cursor-pointer transition group border-b border-slate-800/20 ${
+                  isSelected ? "bg-blue-600/30 font-semibold" : "hover:bg-slate-800/50"
+                }`}
+              >
+                <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
+                  {getFileIcon(file.fileType)}
+                  <span className="truncate max-w-sm">{file.name}</span>
+                  {file.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
+                </td>
+                <td className="py-2.5 px-3 text-slate-400 uppercase font-mono">{file.extension || "FILE"}</td>
+                <td className="py-2.5 px-3 text-slate-400">{formatBytes(file.totalSizeBytes)}</td>
+                <td className="py-2.5 px-3 text-slate-400">{formatDate(file.updatedAt)}</td>
+                <td className="py-2.5 px-3 text-right">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onContextMenu(e, file, "file");
+                    }}
+                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

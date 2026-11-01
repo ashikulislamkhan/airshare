@@ -36,6 +36,10 @@ export default function UploadTray() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
+  const totalSpeed = uploadTasks
+    .filter((t) => t.status === "uploading")
+    .reduce((sum, t) => sum + (t.speedBytesPerSec || 0), 0);
+
   return (
     <div className="fixed bottom-6 right-6 w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 select-none">
       {/* Header */}
@@ -50,7 +54,12 @@ export default function UploadTray() {
             {activeCount > 0 ? `Uploading ${activeCount} item${activeCount > 1 ? "s" : ""}` : "Uploads complete"}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {totalSpeed > 0 && (
+            <span className="text-emerald-400 font-mono text-xs font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              {formatSpeed(totalSpeed)}
+            </span>
+          )}
           <button
             onClick={() => setMinimized(!minimized)}
             className="p-1 text-slate-400 hover:text-white rounded transition"
@@ -78,14 +87,21 @@ export default function UploadTray() {
                     {task.file.name}
                   </span>
                 </div>
-                <span className="text-slate-400 text-[11px] whitespace-nowrap">
-                  {task.status === "completed" && <span className="text-emerald-400">Done</span>}
-                  {task.status === "uploading" && (
-                    <span className="text-blue-400 font-semibold">{task.progressPercent}%</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {task.status === "uploading" && task.speedBytesPerSec > 0 && (
+                    <span className="text-emerald-400 font-mono text-[10px] font-medium bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      {formatSpeed(task.speedBytesPerSec)}
+                    </span>
                   )}
-                  {task.status === "error" && <span className="text-red-400">Error</span>}
-                  {task.status === "queued" && <span className="text-slate-400">Queued</span>}
-                </span>
+                  <span className="text-slate-400 text-[11px] whitespace-nowrap">
+                    {task.status === "completed" && <span className="text-emerald-400 font-medium">Done</span>}
+                    {task.status === "uploading" && (
+                      <span className="text-blue-400 font-semibold">{task.progressPercent}%</span>
+                    )}
+                    {task.status === "error" && <span className="text-red-400">Error</span>}
+                    {task.status === "queued" && <span className="text-slate-400">Queued</span>}
+                  </span>
+                </div>
               </div>
 
               {/* Progress Bar */}

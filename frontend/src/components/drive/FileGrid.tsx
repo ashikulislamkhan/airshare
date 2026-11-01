@@ -16,8 +16,14 @@ import { AirShareFile, AirShareFolder } from "../../lib/types";
 interface FileGridProps {
   folders: AirShareFolder[];
   files: AirShareFile[];
+  selectedIds?: Set<string>;
   onFolderClick: (folder: AirShareFolder) => void;
   onFileClick: (file: AirShareFile) => void;
+  onItemSelect?: (
+    e: React.MouseEvent,
+    target: AirShareFile | AirShareFolder,
+    type: "file" | "folder"
+  ) => void;
   onContextMenu: (
     e: React.MouseEvent,
     target: AirShareFile | AirShareFolder,
@@ -28,8 +34,10 @@ interface FileGridProps {
 export default function FileGrid({
   folders,
   files,
+  selectedIds = new Set(),
   onFolderClick,
   onFileClick,
+  onItemSelect,
   onContextMenu,
 }: FileGridProps) {
   const formatBytes = (bytes: number) => {
@@ -66,31 +74,40 @@ export default function FileGrid({
             Folders ({folders.length})
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {folders.map((folder) => (
-              <div
-                key={folder.id}
-                onDoubleClick={() => onFolderClick(folder)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  onContextMenu(e, folder, "folder");
-                }}
-                className="group relative bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-blue-500/50 rounded-xl p-3 flex items-center gap-3 cursor-pointer transition shadow-sm hover:shadow-md"
-              >
-                <Folder className="w-5 h-5 text-amber-400 fill-amber-400/20 flex-shrink-0" />
-                <span className="text-xs font-medium text-slate-200 truncate flex-1" title={folder.name}>
-                  {folder.name}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+            {folders.map((folder) => {
+              const isSelected = selectedIds.has(folder.id);
+              return (
+                <div
+                  key={folder.id}
+                  data-selectable-id={folder.id}
+                  onClick={(e) => onItemSelect?.(e, folder, "folder")}
+                  onDoubleClick={() => onFolderClick(folder)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
                     onContextMenu(e, folder, "folder");
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white rounded transition"
+                  className={`group relative border rounded-xl p-3 flex items-center gap-3 cursor-pointer transition shadow-sm hover:shadow-md ${
+                    isSelected
+                      ? "bg-blue-600/30 border-blue-500 ring-2 ring-blue-500/50"
+                      : "bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50"
+                  }`}
                 >
-                  <MoreVertical className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+                  <Folder className="w-5 h-5 text-amber-400 fill-amber-400/20 flex-shrink-0" />
+                  <span className="text-xs font-medium text-slate-200 truncate flex-1" title={folder.name}>
+                    {folder.name}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onContextMenu(e, folder, "folder");
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white rounded transition"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -102,47 +119,56 @@ export default function FileGrid({
             Files ({files.length})
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                onDoubleClick={() => onFileClick(file)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  onContextMenu(e, file, "file");
-                }}
-                className="group relative bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 hover:border-blue-500/50 rounded-2xl overflow-hidden cursor-pointer transition shadow-sm hover:shadow-lg flex flex-col"
-              >
-                {/* Thumbnail / Icon Container */}
-                <div className="h-32 bg-slate-900/50 flex items-center justify-center relative border-b border-slate-700/40">
-                  {getFileIcon(file.fileType)}
+            {files.map((file) => {
+              const isSelected = selectedIds.has(file.id);
+              return (
+                <div
+                  key={file.id}
+                  data-selectable-id={file.id}
+                  onClick={(e) => onItemSelect?.(e, file, "file")}
+                  onDoubleClick={() => onFileClick(file)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    onContextMenu(e, file, "file");
+                  }}
+                  className={`group relative border rounded-2xl overflow-hidden cursor-pointer transition shadow-sm hover:shadow-lg flex flex-col ${
+                    isSelected
+                      ? "bg-blue-600/30 border-blue-500 ring-2 ring-blue-500/50"
+                      : "bg-slate-800/50 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50"
+                  }`}
+                >
+                  {/* Thumbnail / Icon Container */}
+                  <div className="h-32 bg-slate-900/50 flex items-center justify-center relative border-b border-slate-700/40">
+                    {getFileIcon(file.fileType)}
 
-                  {file.isStarred && (
-                    <Star className="w-4 h-4 text-amber-400 fill-amber-400 absolute top-2 left-2" />
-                  )}
+                    {file.isStarred && (
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400 absolute top-2 left-2" />
+                    )}
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onContextMenu(e, file, "file");
-                    }}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
-                  >
-                    <MoreVertical className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onContextMenu(e, file, "file");
+                      }}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
-                {/* File Details */}
-                <div className="p-3">
-                  <p className="text-xs font-medium text-slate-200 truncate" title={file.name}>
-                    {file.name}
-                  </p>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
-                    <span className="uppercase font-mono">{file.extension || "FILE"}</span>
-                    <span>{formatBytes(file.totalSizeBytes)}</span>
+                  {/* File Details */}
+                  <div className="p-3">
+                    <p className="text-xs font-medium text-slate-200 truncate" title={file.name}>
+                      {file.name}
+                    </p>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
+                      <span className="uppercase font-mono">{file.extension || "FILE"}</span>
+                      <span>{formatBytes(file.totalSizeBytes)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -75,47 +75,91 @@ export class DirectCloudRunUploader {
       let attempt = 0;
       let success = false;
 
+      const baseUploadedBytes = totalUploadedBytes;
+      let activeXhr: XMLHttpRequest | null = null;
+
       while (attempt < 3 && !success) {
         attempt++;
         try {
           const freshToken = await getFirebaseIdToken();
-          const response = await fetch(`${API_BASE_URL}/files/${fileId}/upload-chunk`, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${freshToken}`,
-              "X-Chunk-Index": chunkIndex.toString(),
-              "X-Chunk-Size": chunkSize.toString(),
-              "Content-Type": "application/octet-stream",
-            },
-            body: chunkBlob,
-            signal: this.abortController.signal,
+          let chunkUploadedBytes = 0;
+
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            activeXhr = xhr;
+            xhr.open("POST", `${API_BASE_URL}/files/${fileId}/upload-chunk`);
+            xhr.setRequestHeader("Authorization", `Bearer ${freshToken}`);
+            xhr.setRequestHeader("X-Chunk-Index", chunkIndex.toString());
+            xhr.setRequestHeader("X-Chunk-Size", chunkSize.toString());
+            xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+            const abortHandler = () => {
+              xhr.abort();
+              reject(new Error("Upload paused by user."));
+            };
+            this.abortController.signal.addEventListener("abort", abortHandler, { once: true });
+
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const delta = event.loaded - chunkUploadedBytes;
+                chunkUploadedBytes = event.loaded;
+                totalUploadedBytes = baseUploadedBytes + event.loaded;
+
+                const now = Date.now();
+                const timeElapsedSec = (now - lastTime) / 1000;
+                let speed = 0;
+                if (timeElapsedSec >= 0.5) {
+                  speed = (bytesSinceLastTime + delta) / timeElapsedSec;
+                  lastTime = now;
+                  bytesSinceLastTime = 0;
+                } else {
+                  bytesSinceLastTime += delta;
+                }
+
+                if (this.onProgress) {
+                  this.onProgress({
+                    uploadedBytes: totalUploadedBytes,
+                    totalBytes: totalSize,
+                    percent: Math.min(99, Math.round((totalUploadedBytes / totalSize) * 100)),
+                    speedBytesPerSec: speed,
+                    currentChunkIndex: chunkIndex + 1,
+                    totalChunks,
+                  });
+                }
+              }
+            };
+
+            xhr.onload = () => {
+              this.abortController.signal.removeEventListener("abort", abortHandler);
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+              } else {
+                reject(new Error(`Upload error (${xhr.status}): ${xhr.responseText || xhr.statusText}`));
+              }
+            };
+
+            xhr.onerror = () => {
+              this.abortController.signal.removeEventListener("abort", abortHandler);
+              reject(new Error("Network error during upload"));
+            };
+
+            xhr.onabort = () => {
+              this.abortController.signal.removeEventListener("abort", abortHandler);
+              reject(new Error("Upload aborted"));
+            };
+
+            xhr.send(chunkBlob);
           });
 
-          if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Cloud Run upload error (${response.status}): ${err}`);
-          }
-
           success = true;
-          totalUploadedBytes += chunkSize;
-          bytesSinceLastTime += chunkSize;
-
-          // Calculate speed
-          const now = Date.now();
-          const timeElapsedSec = (now - lastTime) / 1000;
-          let speed = 0;
-          if (timeElapsedSec >= 1.0) {
-            speed = bytesSinceLastTime / timeElapsedSec;
-            lastTime = now;
-            bytesSinceLastTime = 0;
-          }
+          totalUploadedBytes = baseUploadedBytes + chunkSize;
 
           if (this.onProgress) {
             this.onProgress({
               uploadedBytes: totalUploadedBytes,
               totalBytes: totalSize,
               percent: Math.round((totalUploadedBytes / totalSize) * 100),
-              speedBytesPerSec: speed,
+              speedBytesPerSec: 0,
               currentChunkIndex: chunkIndex + 1,
               totalChunks,
             });
