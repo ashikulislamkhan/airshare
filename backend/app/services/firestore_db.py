@@ -221,9 +221,10 @@ class FirestoreDB:
     async def get_file_chunks(self, version_id: str) -> List[Dict[str, Any]]:
         chunks_docs = await self.db.collection("chunks") \
             .where("versionId", "==", version_id) \
-            .order_by("chunkIndex") \
             .get()
-        return [doc.to_dict() for doc in chunks_docs]
+        chunks = [doc.to_dict() for doc in chunks_docs]
+        chunks.sort(key=lambda c: c.get("chunkIndex", 0))
+        return chunks
 
     async def list_files(
         self,
