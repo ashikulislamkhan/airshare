@@ -108,7 +108,6 @@ export default function DrivePage() {
     selectedCount: number;
   } | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   // Sorting & Filtering State
