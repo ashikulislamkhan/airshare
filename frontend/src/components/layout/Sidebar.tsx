@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -34,8 +34,21 @@ export default function Sidebar({
   const pathname = usePathname();
   const { airshareUser } = useAuth();
   const { addUploads } = useTransfer();
+  const [isNewMenuOpen, setIsNewMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const newMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close "+ New" dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
+        setIsNewMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const navItems = [
     { label: "My Drive", href: "/drive", icon: HardDrive },
@@ -91,42 +104,54 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* New Action Dropdown / Button (Liquid Glass) */}
-      <div className="p-4">
-        <div className="relative group">
-          <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg shadow-cyan-500/25 border border-white/20 active:scale-95 transition duration-200">
+      {/* New Action Dropdown / Button (Liquid Glass, Click only - NOT ON HOVER) */}
+      <div className="p-4" ref={newMenuRef}>
+        <div className="relative">
+          <button
+            onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg shadow-cyan-500/25 border border-white/20 active:scale-95 transition duration-200"
+          >
             <Plus className="w-5 h-5 stroke-[2.5]" />
-            <span>New Upload</span>
+            <span>+ New</span>
           </button>
 
-          {/* Action Menu (Liquid Glass Frosted) */}
-          <div className="hidden group-hover:block group-focus-within:block absolute top-full left-0 w-full mt-2 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 z-50">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
-            >
-              <Upload className="w-4 h-4 text-cyan-400" />
-              Upload Files
-            </button>
-            <button
-              onClick={() => folderInputRef.current?.click()}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
-            >
-              <Upload className="w-4 h-4 text-blue-400" />
-              Upload Folder
-            </button>
-            <div className="h-px bg-white/10 my-1" />
-            <button
-              onClick={() => {
-                onCreateFolder?.();
-                onCloseMobile?.();
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
-            >
-              <FolderPlus className="w-4 h-4 text-emerald-400" />
-              New Folder
-            </button>
-          </div>
+          {/* Action Menu (Shows ONLY when isNewMenuOpen is true) */}
+          {isNewMenuOpen && (
+            <div className="absolute top-full left-0 w-full mt-2 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <button
+                onClick={() => {
+                  setIsNewMenuOpen(false);
+                  fileInputRef.current?.click();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
+              >
+                <Upload className="w-4 h-4 text-cyan-400" />
+                Files Upload
+              </button>
+              <button
+                onClick={() => {
+                  setIsNewMenuOpen(false);
+                  folderInputRef.current?.click();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
+              >
+                <Upload className="w-4 h-4 text-blue-400" />
+                Folder Upload
+              </button>
+              <div className="h-px bg-white/10 my-1" />
+              <button
+                onClick={() => {
+                  setIsNewMenuOpen(false);
+                  onCreateFolder?.();
+                  onCloseMobile?.();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
+              >
+                <FolderPlus className="w-4 h-4 text-emerald-400" />
+                Create Folder
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Hidden inputs */}

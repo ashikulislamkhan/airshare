@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Sidebar from "../../components/layout/Sidebar";
 import Header from "../../components/layout/Header";
 import MobileNav from "../../components/layout/MobileNav";
+import Footer from "../../components/layout/Footer";
 import LoginModal from "../../components/auth/LoginModal";
 import { useAuth } from "../../context/AuthContext";
 import { Settings, Shield, HardDrive, User, Server } from "lucide-react";
@@ -119,6 +120,8 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          <Footer />
         </main>
       </div>
 

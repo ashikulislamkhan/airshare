@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Sidebar from "../../components/layout/Sidebar";
 import Header from "../../components/layout/Header";
 import MobileNav from "../../components/layout/MobileNav";
+import Footer from "../../components/layout/Footer";
 import LoginModal from "../../components/auth/LoginModal";
 import FileGrid from "../../components/drive/FileGrid";
 import FileList from "../../components/drive/FileList";
@@ -172,6 +173,8 @@ export default function RecentPage() {
               />
             )}
           </ErrorBoundary>
+
+          <Footer />
         </main>
       </div>
 

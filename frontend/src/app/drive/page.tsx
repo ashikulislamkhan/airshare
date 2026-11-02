@@ -12,6 +12,7 @@ import PreviewModal from "../../components/preview/PreviewModal";
 import ShareDialog from "../../components/drive/ShareDialog";
 import LoginModal from "../../components/auth/LoginModal";
 import MobileNav from "../../components/layout/MobileNav";
+import Footer from "../../components/layout/Footer";
 import { SelectionBox } from "../../components/common/SelectionBox";
 import { ErrorBoundary } from "../../components/common/ErrorBoundary";
 import { useDriveSelection } from "../../hooks/useDriveSelection";
@@ -605,11 +606,16 @@ export default function DrivePage() {
               />
             )}
           </ErrorBoundary>
+
+          <Footer />
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileNav currentFolderId={currentFolder?.id || null} />
+      <MobileNav
+        currentFolderId={currentFolder?.id || null}
+        onCreateFolder={() => setIsNewFolderOpen(true)}
+      />
 
       {/* New Folder Modal */}
       <NewFolderModal
