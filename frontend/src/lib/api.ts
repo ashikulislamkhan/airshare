@@ -131,11 +131,8 @@ export const api = {
     } catch (e) {
       console.warn("getPreviewToken endpoint failed, falling back to Firebase token", e);
     }
-    const user = auth.currentUser;
-    if (user) {
-      return await user.getIdToken();
-    }
-    return "";
+    const token = await getFirebaseIdToken();
+    return token || "";
   },
 
   getStreamUrl(fileId: string, token?: string, download: boolean = false): string {
