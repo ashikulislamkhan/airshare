@@ -22,7 +22,7 @@ export default function LoginModal() {
         {/* Title */}
         <div className="space-y-1.5">
           <h1 className="text-2xl font-bold text-white tracking-tight">AirShare</h1>
-          <p className="text-xs text-cyan-400 font-semibold tracking-wide">#ShareOnAir • Cloud v3.0</p>
+          <p className="text-xs text-cyan-400 font-semibold tracking-wide">AirShare • Cloud Storage v3.0</p>
           <p className="text-xs text-slate-300 pt-2 leading-relaxed">
             Zero-Dollar High Performance Cloud Drive powered by Google Cloud Run & Telegram MTProto Bitstream.
           </p>

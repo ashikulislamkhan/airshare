@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTransfer } from "../../context/TransferContext";
+import InstallAppButton from "../common/InstallAppButton";
 
 interface SidebarProps {
   onCreateFolder?: () => void;
@@ -89,7 +90,7 @@ export default function Sidebar({
             <h1 className="font-bold text-base text-white tracking-tight flex items-center gap-1.5">
               AirShare
             </h1>
-            <p className="text-[10px] text-cyan-400 font-mono font-medium">#ShareOnAir v3.0</p>
+            <p className="text-[10px] text-cyan-400 font-mono font-medium">Cloud Storage</p>
           </div>
         </div>
 
@@ -196,6 +197,11 @@ export default function Sidebar({
           );
         })}
       </nav>
+
+      {/* PWA Install App Button */}
+      <div className="px-4 py-2 border-t border-white/[0.05]">
+        <InstallAppButton className="w-full justify-center" />
+      </div>
 
       {/* Storage Indicator (Frosted Liquid Glass Card) */}
       <div className="p-4 border-t border-white/[0.08]">

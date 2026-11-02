@@ -7,6 +7,7 @@ import MobileNav from "../../components/layout/MobileNav";
 import Footer from "../../components/layout/Footer";
 import LoginModal from "../../components/auth/LoginModal";
 import { useAuth } from "../../context/AuthContext";
+import InstallAppButton from "../../components/common/InstallAppButton";
 import { Settings, Shield, HardDrive, User, Server } from "lucide-react";
 
 export default function SettingsPage() {
@@ -65,11 +66,12 @@ export default function SettingsPage() {
                   {firebaseUser.displayName?.charAt(0) || "U"}
                 </div>
               )}
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 <p className="text-sm font-semibold text-white">{firebaseUser.displayName}</p>
                 <p className="text-xs text-slate-400">{firebaseUser.email}</p>
                 <p className="text-[11px] font-mono text-slate-500">UID: {firebaseUser.uid}</p>
               </div>
+              <InstallAppButton variant="card" />
             </div>
           </div>
 

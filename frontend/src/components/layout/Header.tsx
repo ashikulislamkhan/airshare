@@ -3,6 +3,7 @@
 import React from "react";
 import { Search, LayoutGrid, List, LogOut, Menu } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import InstallAppButton from "../common/InstallAppButton";
 
 interface HeaderProps {
   searchQuery: string;
@@ -22,7 +23,7 @@ export default function Header({
   const { firebaseUser, signOut } = useAuth();
 
   return (
-    <header className="h-16 bg-slate-950/70 backdrop-blur-2xl border-b border-white/[0.08] flex items-center justify-between px-3 sm:px-6 z-10 flex-shrink-0">
+    <header className="min-h-[70px] py-2 bg-slate-950/70 backdrop-blur-2xl border-b border-white/[0.08] flex items-center justify-between px-3 sm:px-6 z-10 flex-shrink-0">
       {/* Left Section: Mobile Menu Button & Mobile Logo */}
       <div className="flex items-center gap-2 mr-2">
         {onToggleMobileMenu && (
@@ -68,35 +69,40 @@ export default function Header({
           {viewMode === "grid" ? <List className="w-4.5 h-4.5" /> : <LayoutGrid className="w-4.5 h-4.5" />}
         </button>
 
-        {/* User Profile */}
+        {/* User Profile & Install App */}
         {firebaseUser ? (
-          <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-white/[0.08]">
-            {firebaseUser.photoURL ? (
-              <img
-                src={firebaseUser.photoURL}
-                alt={firebaseUser.displayName || "User"}
-                className="w-8 h-8 rounded-full border border-cyan-400/40 shadow-sm"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-                {firebaseUser.displayName?.charAt(0) || "U"}
+          <div className="flex flex-col items-end gap-1.5 pl-2 sm:pl-3 border-l border-white/[0.08]">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              {firebaseUser.photoURL ? (
+                <img
+                  src={firebaseUser.photoURL}
+                  alt={firebaseUser.displayName || "User"}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-cyan-400/40 shadow-sm"
+                />
+              ) : (
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+                  {firebaseUser.displayName?.charAt(0) || "U"}
+                </div>
+              )}
+              <div className="hidden lg:block text-left">
+                <p className="text-xs font-semibold text-white leading-tight truncate max-w-[120px]">
+                  {firebaseUser.displayName || "AirShare User"}
+                </p>
+                <p className="text-[10px] text-slate-400 leading-tight truncate max-w-[120px]">
+                  {firebaseUser.email}
+                </p>
               </div>
-            )}
-            <div className="hidden lg:block text-left">
-              <p className="text-xs font-semibold text-white leading-tight truncate max-w-[120px]">
-                {firebaseUser.displayName || "AirShare User"}
-              </p>
-              <p className="text-[10px] text-slate-400 leading-tight truncate max-w-[120px]">
-                {firebaseUser.email}
-              </p>
+              <button
+                onClick={signOut}
+                title="Sign Out"
+                className="p-1.5 sm:p-2 text-slate-400 hover:text-rose-400 hover:bg-white/[0.06] rounded-xl border border-white/[0.05] transition"
+              >
+                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
             </div>
-            <button
-              onClick={signOut}
-              title="Sign Out"
-              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/[0.06] rounded-xl border border-white/[0.05] transition"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+
+            {/* Install App Button just below the profile bar */}
+            <InstallAppButton />
           </div>
         ) : null}
       </div>

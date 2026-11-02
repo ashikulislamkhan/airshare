@@ -1,4 +1,4 @@
-# AirShare (#ShareOnAir) — v3.0
+# AirShare — v3.0
 
 > **Zero-Dollar Cloud Drive Architecture**: Vercel (UI Delivery) + Google Cloud Run (Always Free Compute) + Google Cloud Firestore (NoSQL Metadata) + Telegram MTProto (Unlimited Raw Binary Chunk Storage).
 
