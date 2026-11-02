@@ -36,6 +36,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#060b18" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="AirShare" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__AIRSHARE_INSTALL_PROMPT__ = null;
+              window.addEventListener('beforeinstallprompt', function(e) {
+                e.preventDefault();
+                window.__AIRSHARE_INSTALL_PROMPT__ = e;
+                window.dispatchEvent(new CustomEvent('airshare_prompt_ready'));
+              });
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased bg-[#060b18] text-slate-100 h-screen overflow-hidden">
         <PWARegister />
         <AuthProvider>

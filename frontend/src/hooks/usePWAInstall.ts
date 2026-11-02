@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,72 +10,84 @@ interface BeforeInstallPromptEvent extends Event {
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
-  const [showManualPrompt, setShowManualPrompt] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Check if already running as standalone PWA
-    const isStandalone = 
+    // Check if already running in standalone mode
+    const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      // @ts-ignore (iOS Safari standalone property)
+      // @ts-ignore
       window.navigator.standalone === true;
 
     setIsInstalled(isStandalone);
 
-    // Detect iOS devices
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isIosDevice);
+    // Pick up pre-existing prompt captured in <head>
+    // @ts-ignore
+    if (window.__AIRSHARE_INSTALL_PROMPT__) {
+      // @ts-ignore
+      setDeferredPrompt(window.__AIRSHARE_INSTALL_PROMPT__);
+    }
 
-    // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      // @ts-ignore
+      window.__AIRSHARE_INSTALL_PROMPT__ = e as BeforeInstallPromptEvent;
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    const handlePromptReady = () => {
+      // @ts-ignore
+      if (window.__AIRSHARE_INSTALL_PROMPT__) {
+        // @ts-ignore
+        setDeferredPrompt(window.__AIRSHARE_INSTALL_PROMPT__);
+      }
     };
 
     const handleAppInstalled = () => {
       setIsInstalled(true);
+      // @ts-ignore
+      window.__AIRSHARE_INSTALL_PROMPT__ = null;
       setDeferredPrompt(null);
-      setShowIOSPrompt(false);
-      setShowManualPrompt(false);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("airshare_prompt_ready", handlePromptReady);
     window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("airshare_prompt_ready", handlePromptReady);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
-  const installApp = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome === "accepted") {
-        setIsInstalled(true);
+  const installApp = useCallback(async () => {
+    // @ts-ignore
+    const promptEvent: BeforeInstallPromptEvent | null =
+      deferredPrompt || (typeof window !== "undefined" ? (window as any).__AIRSHARE_INSTALL_PROMPT__ : null);
+
+    if (promptEvent) {
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice && choice.outcome === "accepted") {
+          setIsInstalled(true);
+        }
+      } catch (err) {
+        console.warn("Direct install prompt trigger:", err);
+      }
+      // @ts-ignore
+      if (typeof window !== "undefined") {
+        (window as any).__AIRSHARE_INSTALL_PROMPT__ = null;
       }
       setDeferredPrompt(null);
-    } else if (isIOS) {
-      setShowIOSPrompt(true);
-    } else {
-      // In Chromium / Edge / Brave if beforeinstallprompt was already handled or suppressed
-      setShowManualPrompt(true);
     }
-  };
+  }, [deferredPrompt]);
 
   return {
     installApp,
     isInstalled,
-    isIOS,
-    showIOSPrompt,
-    setShowIOSPrompt,
-    showManualPrompt,
-    setShowManualPrompt,
-    canInstall: !isInstalled
+    canInstall: !isInstalled,
   };
 }
