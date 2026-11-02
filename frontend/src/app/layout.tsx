@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { TransferProvider } from "../context/TransferContext";
 import UploadTray from "../components/transfer/UploadTray";
+import { ErrorBoundary } from "../components/common/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "AirShare — #ShareOnAir",
@@ -20,7 +21,9 @@ export default function RootLayout({
         <AuthProvider>
           <TransferProvider>
             {children}
-            <UploadTray />
+            <ErrorBoundary fallback={null}>
+              <UploadTray />
+            </ErrorBoundary>
           </TransferProvider>
         </AuthProvider>
       </body>

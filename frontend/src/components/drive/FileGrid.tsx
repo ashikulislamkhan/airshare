@@ -46,10 +46,10 @@ function FileThumbnail({
   const [loaded, setLoaded] = React.useState(false);
   const [hasError, setHasError] = React.useState(false);
 
-  const ext = (file.extension || "").toLowerCase();
+  const ext = (file.extension || (file.name && file.name.includes(".") ? file.name.split(".").pop() : "") || "").toLowerCase();
   const isImage = file.fileType === "image" || ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "avif"].includes(ext);
 
-  if (!isImage || !token || hasError) {
+  if (!isImage || !token || hasError || !file.id) {
     return <div className="flex items-center justify-center w-full h-full">{fallback}</div>;
   }
 
@@ -90,10 +90,10 @@ export default function FileGrid({
   onContextMenu,
 }: FileGridProps) {
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 B";
+    if (!bytes || isNaN(bytes) || bytes <= 0) return "0 B";
     const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 

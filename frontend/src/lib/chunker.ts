@@ -59,7 +59,7 @@ export class DirectCloudRunUploader {
     let bytesSinceLastTime = 0;
     let smoothedSpeed = 0;
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+    const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api").replace(/\/$/, "");
 
     // Step 2: Slice and stream each chunk directly to Cloud Run
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {

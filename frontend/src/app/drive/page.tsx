@@ -11,6 +11,7 @@ import ContextMenu from "../../components/drive/ContextMenu";
 import PreviewModal from "../../components/preview/PreviewModal";
 import ShareDialog from "../../components/drive/ShareDialog";
 import LoginModal from "../../components/auth/LoginModal";
+import { ErrorBoundary } from "../../components/common/ErrorBoundary";
 
 import { useAuth } from "../../context/AuthContext";
 import { useTransfer } from "../../context/TransferContext";
@@ -218,23 +219,25 @@ export default function DrivePage() {
 
   const sortItems = <T extends AirShareFile | AirShareFolder>(items: T[], sortOpt: SortOption): T[] => {
     return [...items].sort((a, b) => {
+      const nameA = a.name || "";
+      const nameB = b.name || "";
       switch (sortOpt) {
         case "name_asc":
-          return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+          return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" });
         case "name_desc":
-          return b.name.localeCompare(a.name, undefined, { numeric: true, sensitivity: "base" });
+          return nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: "base" });
         case "modified_desc":
           return (b.updatedAt || 0) - (a.updatedAt || 0);
         case "modified_asc":
           return (a.updatedAt || 0) - (b.updatedAt || 0);
         case "size_desc": {
-          const sizeA = "totalSizeBytes" in a ? (a as AirShareFile).totalSizeBytes : 0;
-          const sizeB = "totalSizeBytes" in b ? (b as AirShareFile).totalSizeBytes : 0;
+          const sizeA = "totalSizeBytes" in a ? (a as AirShareFile).totalSizeBytes || 0 : 0;
+          const sizeB = "totalSizeBytes" in b ? (b as AirShareFile).totalSizeBytes || 0 : 0;
           return sizeB - sizeA;
         }
         case "size_asc": {
-          const sizeA = "totalSizeBytes" in a ? (a as AirShareFile).totalSizeBytes : 0;
-          const sizeB = "totalSizeBytes" in b ? (b as AirShareFile).totalSizeBytes : 0;
+          const sizeA = "totalSizeBytes" in a ? (a as AirShareFile).totalSizeBytes || 0 : 0;
+          const sizeB = "totalSizeBytes" in b ? (b as AirShareFile).totalSizeBytes || 0 : 0;
           return sizeA - sizeB;
         }
         case "type_asc": {
@@ -250,13 +253,17 @@ export default function DrivePage() {
 
   // Filter & Sort items
   const filteredFolders = folders.filter((f) =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (f.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
   const filteredFiles = files.filter((f) => {
+    const name = (f.name || "").toLowerCase();
+    const ext = (f.extension || (f.name && f.name.includes(".") ? f.name.split(".").pop() : "") || "").toLowerCase();
+    const fType = (f.fileType || "").toLowerCase();
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.extension.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.fileType.toLowerCase().includes(searchQuery.toLowerCase());
+      name.includes(query) ||
+      ext.includes(query) ||
+      fType.includes(query);
     const matchesCategory = matchFilter(f, activeFilter);
     return matchesSearch && matchesCategory;
   });
@@ -708,33 +715,35 @@ export default function DrivePage() {
           </div>
 
           {/* Drive Grid or List View */}
-          {loading ? (
-            <div className="py-20 text-center text-slate-500 text-xs">
-              Loading drive items...
-            </div>
-          ) : viewMode === "grid" ? (
-            <FileGrid
-              folders={activeFilter === "all" ? sortedFolders : []}
-              files={sortedFiles}
-              selectedIds={selectedIds}
-              token={authToken}
-              onFolderClick={(folder) => setCurrentFolder(folder)}
-              onFileClick={(file) => setPreviewFile(file)}
-              onItemSelect={handleItemSelect}
-              onContextMenu={handleContextMenu}
-            />
-          ) : (
-            <FileList
-              folders={activeFilter === "all" ? sortedFolders : []}
-              files={sortedFiles}
-              selectedIds={selectedIds}
-              token={authToken}
-              onFolderClick={(folder) => setCurrentFolder(folder)}
-              onFileClick={(file) => setPreviewFile(file)}
-              onItemSelect={handleItemSelect}
-              onContextMenu={handleContextMenu}
-            />
-          )}
+          <ErrorBoundary>
+            {loading ? (
+              <div className="py-20 text-center text-slate-500 text-xs">
+                Loading drive items...
+              </div>
+            ) : viewMode === "grid" ? (
+              <FileGrid
+                folders={activeFilter === "all" ? sortedFolders : []}
+                files={sortedFiles}
+                selectedIds={selectedIds}
+                token={authToken}
+                onFolderClick={(folder) => setCurrentFolder(folder)}
+                onFileClick={(file) => setPreviewFile(file)}
+                onItemSelect={handleItemSelect}
+                onContextMenu={handleContextMenu}
+              />
+            ) : (
+              <FileList
+                folders={activeFilter === "all" ? sortedFolders : []}
+                files={sortedFiles}
+                selectedIds={selectedIds}
+                token={authToken}
+                onFolderClick={(folder) => setCurrentFolder(folder)}
+                onFileClick={(file) => setPreviewFile(file)}
+                onItemSelect={handleItemSelect}
+                onContextMenu={handleContextMenu}
+              />
+            )}
+          </ErrorBoundary>
         </main>
       </div>
 

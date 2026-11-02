@@ -18,30 +18,13 @@ export default function UploadTray() {
   const [minimized, setMinimized] = useState(false);
   const [persistentSpeed, setPersistentSpeed] = useState<number>(0);
 
-  if (uploadTasks.length === 0 || !isTrayOpen) return null;
-
   const completedCount = uploadTasks.filter((t) => t.status === "completed").length;
   const activeCount = uploadTasks.filter((t) => t.status === "uploading" || t.status === "queued").length;
-
-  const formatSpeed = (bytesPerSec: number) => {
-    if (bytesPerSec <= 0) return "";
-    const mbps = bytesPerSec / (1024 * 1024);
-    return `${mbps.toFixed(1)} MB/s`;
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-  };
-
   const totalSpeed = uploadTasks
     .filter((t) => t.status === "uploading")
     .reduce((sum, t) => sum + (t.speedBytesPerSec || 0), 0);
 
-  // Keep speed display steady without flickering
+  // Keep speed display steady without flickering - MUST RUN UNCONDITIONALLY ON EVERY RENDER
   React.useEffect(() => {
     if (totalSpeed > 0) {
       setPersistentSpeed(totalSpeed);
@@ -49,6 +32,22 @@ export default function UploadTray() {
       setPersistentSpeed(0);
     }
   }, [totalSpeed, activeCount]);
+
+  if (uploadTasks.length === 0 || !isTrayOpen) return null;
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (!bytesPerSec || isNaN(bytesPerSec) || bytesPerSec <= 0) return "";
+    const mbps = bytesPerSec / (1024 * 1024);
+    return `${mbps.toFixed(1)} MB/s`;
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (!bytes || isNaN(bytes) || bytes <= 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
 
   return (
     <div className="fixed bottom-6 right-6 w-96 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 select-none">
@@ -132,8 +131,8 @@ export default function UploadTray() {
               </div>
 
               {task.status === "error" && task.errorMessage && (
-                <p className="text-[10px] text-red-400 truncate pt-0.5" title={task.errorMessage}>
-                  {task.errorMessage}
+                <p className="text-[10px] text-red-400 truncate pt-0.5" title={String(task.errorMessage)}>
+                  {String(task.errorMessage)}
                 </p>
               )}
             </div>

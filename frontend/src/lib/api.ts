@@ -1,7 +1,7 @@
 import { getFirebaseIdToken } from "./firebase";
 import { AirShareFile, AirShareFolder, AirShareShare } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api").replace(/\/$/, "");
 
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const token = await getFirebaseIdToken();
@@ -75,7 +75,10 @@ export const api = {
   },
 
   getFolderZipUrl(folderId: string, token?: string): string {
-    const url = new URL(`${API_BASE_URL}/folders/${folderId}/zip`);
+    const base = API_BASE_URL.startsWith("http")
+      ? API_BASE_URL
+      : (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000") + API_BASE_URL;
+    const url = new URL(`${base}/folders/${folderId}/zip`);
     if (token) url.searchParams.append("token", token);
     return url.toString();
   },
@@ -136,7 +139,10 @@ export const api = {
   },
 
   getStreamUrl(fileId: string, token?: string, download: boolean = false): string {
-    const url = new URL(`${API_BASE_URL}/files/${fileId}/stream`);
+    const base = API_BASE_URL.startsWith("http")
+      ? API_BASE_URL
+      : (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000") + API_BASE_URL;
+    const url = new URL(`${base}/files/${fileId}/stream`);
     if (token) url.searchParams.append("token", token);
     if (download) url.searchParams.append("download", "true");
     return url.toString();
