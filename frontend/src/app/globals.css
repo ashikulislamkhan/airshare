@@ -7,11 +7,13 @@
   --foreground: #f8fafc;
 }
 
-body {
+html, body {
   color: var(--foreground);
   background: var(--background);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
   -webkit-font-smoothing: antialiased;
 }
 

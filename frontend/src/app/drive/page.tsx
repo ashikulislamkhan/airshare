@@ -29,6 +29,7 @@ import {
   ChevronDown,
   Image as ImageIcon,
   Video,
+  Music,
   FileText,
   FileSpreadsheet,
   Presentation,
@@ -40,6 +41,7 @@ type FilterCategory =
   | "all" 
   | "photos" 
   | "videos" 
+  | "audio"
   | "documents" 
   | "spreadsheets" 
   | "presentations" 
@@ -50,6 +52,7 @@ const FILTER_CATEGORIES: { id: FilterCategory; label: string; icon: React.ReactN
   { id: "all", label: "All", icon: null },
   { id: "photos", label: "Photos", icon: <ImageIcon className="w-3.5 h-3.5 text-emerald-400" /> },
   { id: "videos", label: "Videos", icon: <Video className="w-3.5 h-3.5 text-purple-400" /> },
+  { id: "audio", label: "Audio", icon: <Music className="w-3.5 h-3.5 text-amber-400" /> },
   { id: "documents", label: "Documents", icon: <FileText className="w-3.5 h-3.5 text-rose-400" /> },
   { id: "spreadsheets", label: "Spreadsheets", icon: <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> },
   { id: "presentations", label: "Presentations", icon: <Presentation className="w-3.5 h-3.5 text-amber-400" /> },
@@ -189,6 +192,8 @@ export default function DrivePage() {
         return ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "avif"].includes(ext) || mime.startsWith("image/");
       case "videos":
         return ["mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v"].includes(ext) || mime.startsWith("video/");
+      case "audio":
+        return ["mp3", "wav", "flac", "ogg", "m4a", "aac", "wma", "opus", "aiff"].includes(ext) || mime.startsWith("audio/") || file.fileType === "audio";
       case "documents":
         return ["pdf", "doc", "docx", "txt", "rtf", "odt", "pages", "md"].includes(ext) || mime.includes("pdf");
       case "spreadsheets":
@@ -200,6 +205,7 @@ export default function DrivePage() {
       case "others":
         return !matchFilter(file, "photos") &&
                !matchFilter(file, "videos") &&
+               !matchFilter(file, "audio") &&
                !matchFilter(file, "documents") &&
                !matchFilter(file, "spreadsheets") &&
                !matchFilter(file, "presentations") &&

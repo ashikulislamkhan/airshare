@@ -275,9 +275,27 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
     setControlsVisible(true);
     if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
     hideControlsTimerRef.current = setTimeout(() => {
-      if (videoPlaying) setControlsVisible(false);
+      if (videoPlaying) {
+        setControlsVisible(false);
+        setShowQualityMenu(false);
+        setShowSpeedMenu(false);
+      }
     }, 3000);
   };
+
+  // Autohide controls when video starts playing
+  useEffect(() => {
+    if (videoPlaying) {
+      if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current);
+      hideControlsTimerRef.current = setTimeout(() => {
+        setControlsVisible(false);
+        setShowQualityMenu(false);
+        setShowSpeedMenu(false);
+      }, 3000);
+    } else {
+      setControlsVisible(true);
+    }
+  }, [videoPlaying]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -709,7 +727,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
 
       {/* Main Content Area */}
       <div 
-        className="flex-1 flex items-center justify-center p-4 md:p-6 overflow-hidden relative"
+        className="flex-1 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden relative"
         onMouseMove={handleMouseMove}
       >
         {loading ? (
@@ -819,17 +837,62 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                   </div>
                 )}
 
-                {/* Quality & Speed Status Badge (Top Left of Video) - disappears after 3s of inactivity */}
+                {/* Top Left: Interactive Quality Dropdown + Speed badge (auto-hides after 3s of inactivity) */}
                 <div
-                  className={`absolute top-4 left-4 flex items-center gap-2 pointer-events-none transition-opacity duration-300 ${
-                    controlsVisible || !videoPlaying ? "opacity-100" : "opacity-0"
+                  className={`absolute top-3 left-3 sm:top-4 sm:left-4 flex items-center gap-2 z-30 transition-opacity duration-300 ${
+                    controlsVisible || !videoPlaying ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
                   }`}
                 >
-                  <span className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-cyan-400 border border-slate-700/60 shadow">
-                    {VIDEO_QUALITIES.find((q) => q.id === videoQuality)?.label}
-                  </span>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowQualityMenu(!showQualityMenu);
+                        setShowSpeedMenu(false);
+                        handleMouseMove();
+                      }}
+                      className="px-2.5 py-1.5 bg-black/75 hover:bg-black/90 active:bg-slate-800 backdrop-blur-md text-xs font-semibold rounded-lg border border-slate-700/80 transition flex items-center gap-1.5 text-slate-100 shadow-xl cursor-pointer"
+                      title="Select Video Stream Quality"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="font-mono">{VIDEO_QUALITIES.find((q) => q.id === videoQuality)?.label || "Highest"}</span>
+                      <ChevronDown className={`w-3 h-3 text-slate-300 transition-transform ${showQualityMenu ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {showQualityMenu && (
+                      <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-full left-0 mt-2 w-52 sm:w-56 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-xl shadow-2xl p-1.5 z-40 flex flex-col gap-1 max-w-[85vw] animate-in fade-in zoom-in-95 duration-150"
+                      >
+                        <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                          Video Resolution
+                        </div>
+                        {VIDEO_QUALITIES.map((q) => (
+                          <button
+                            key={q.id}
+                            onClick={() => {
+                              setVideoQuality(q.id);
+                              setShowQualityMenu(false);
+                              handleMouseMove();
+                            }}
+                            className={`text-left px-2.5 py-1.5 rounded-lg text-xs transition flex flex-col ${
+                              videoQuality === q.id
+                                ? "bg-blue-600 text-white font-medium shadow-sm"
+                                : "text-slate-300 hover:bg-slate-800"
+                            }`}
+                          >
+                            <span>{q.label}</span>
+                            <span className={`text-[10px] ${videoQuality === q.id ? "text-blue-200" : "text-slate-400"}`}>
+                              {q.desc}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {videoSpeed !== 1 && (
-                    <span className="bg-black/70 backdrop-blur-md px-2 py-1 rounded-lg text-xs font-mono font-medium text-amber-400 border border-slate-700/60 shadow">
+                    <span className="bg-black/75 backdrop-blur-md px-2 py-1 rounded-lg text-xs font-mono font-medium text-amber-400 border border-slate-700/80 shadow">
                       {videoSpeed}x Speed
                     </span>
                   )}
@@ -837,7 +900,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
 
                 {/* Custom Video Controls Bar */}
                 <div
-                  className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-4 flex flex-col gap-2.5 transition-opacity duration-300 ${
+                  className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-2.5 sm:p-4 flex flex-col gap-1.5 sm:gap-2.5 transition-opacity duration-300 ${
                     controlsVisible || !videoPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
                   }`}
                 >
@@ -853,20 +916,20 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-slate-300">
+                  <div className="flex items-center justify-between text-xs text-slate-300 gap-1 sm:gap-2">
                     {/* Left: Play/Pause, Volume, Time */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                       <button
                         onClick={toggleVideoPlay}
-                        className="p-1.5 text-white hover:text-blue-400 transition"
+                        className="p-1 sm:p-1.5 text-white hover:text-blue-400 transition"
                         title={videoPlaying ? "Pause (Space)" : "Play (Space)"}
                       >
-                        {videoPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                        {videoPlaying ? <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-current" /> : <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />}
                       </button>
 
                       {/* Volume Slider */}
-                      <div className="flex items-center gap-1.5 group/vol">
-                        <button onClick={toggleVideoMute} className="text-slate-300 hover:text-white transition">
+                      <div className="flex items-center gap-1 group/vol">
+                        <button onClick={toggleVideoMute} className="p-1 text-slate-300 hover:text-white transition">
                           {videoMuted || videoVolume === 0 ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
                         </button>
                         <input
@@ -876,69 +939,27 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                           step={0.05}
                           value={videoMuted ? 0 : videoVolume}
                           onChange={(e) => handleVideoVolume(parseFloat(e.target.value))}
-                          className="w-16 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                          className="w-12 sm:w-16 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500 hidden sm:block"
                         />
                       </div>
 
                       {/* Time Indicator */}
-                      <span className="font-mono text-slate-300 ml-1">
+                      <span className="font-mono text-[10px] sm:text-xs text-slate-300 whitespace-nowrap">
                         {formatTime(videoCurrentTime)} / {formatTime(videoDuration)}
                       </span>
                     </div>
 
-                    {/* Right: Quality, Speed, Cast, Fullscreen */}
-                    <div className="flex items-center gap-2 relative">
-                      {/* Quality Selector */}
-                      <div className="relative">
-                        <button
-                          onClick={() => {
-                            setShowQualityMenu(!showQualityMenu);
-                            setShowSpeedMenu(false);
-                          }}
-                          className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1 text-slate-200"
-                          title="Stream Quality"
-                        >
-                          <SlidersHorizontal className="w-3.5 h-3.5 text-blue-400" />
-                          <span>{videoQuality === "highest" ? "Highest" : videoQuality}</span>
-                          <ChevronDown className="w-3 h-3 text-slate-400" />
-                        </button>
-
-                        {showQualityMenu && (
-                          <div className="absolute bottom-9 right-0 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-30 flex flex-col gap-1">
-                            <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                              Video Resolution
-                            </div>
-                            {VIDEO_QUALITIES.map((q) => (
-                              <button
-                                key={q.id}
-                                onClick={() => {
-                                  setVideoQuality(q.id);
-                                  setShowQualityMenu(false);
-                                }}
-                                className={`text-left px-2.5 py-1.5 rounded-lg text-xs transition flex flex-col ${
-                                  videoQuality === q.id
-                                    ? "bg-blue-600 text-white font-medium"
-                                    : "text-slate-300 hover:bg-slate-800"
-                                }`}
-                              >
-                                <span>{q.label}</span>
-                                <span className={`text-[10px] ${videoQuality === q.id ? "text-blue-200" : "text-slate-400"}`}>
-                                  {q.desc}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
+                    {/* Right: Speed, Cast, Fullscreen */}
+                    <div className="flex items-center gap-1 sm:gap-2 relative shrink-0">
                       {/* Speed Selector */}
                       <div className="relative">
                         <button
                           onClick={() => {
                             setShowSpeedMenu(!showSpeedMenu);
                             setShowQualityMenu(false);
+                            handleMouseMove();
                           }}
-                          className="px-2.5 py-1 bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1 text-slate-200 font-mono"
+                          className="px-2 py-1 bg-slate-800/90 hover:bg-slate-700 text-[11px] sm:text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1 text-slate-200 font-mono"
                           title="Playback Speed"
                         >
                           <span>{videoSpeed}x</span>
@@ -950,7 +971,10 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                             {PLAYBACK_SPEEDS.map((s) => (
                               <button
                                 key={s}
-                                onClick={() => changeVideoSpeed(s)}
+                                onClick={() => {
+                                  changeVideoSpeed(s);
+                                  handleMouseMove();
+                                }}
                                 className={`text-center py-1.5 rounded-lg text-xs transition ${
                                   videoSpeed === s
                                     ? "bg-blue-600 text-white font-semibold"
@@ -967,7 +991,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                       {/* Cast Button (Remote Playback / AirPlay) */}
                       <button
                         onClick={handleCast}
-                        className="p-1.5 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                        className="p-1.5 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition shrink-0"
                         title="Cast to TV / Remote Device"
                       >
                         <Cast className="w-4 h-4 text-emerald-400" />
@@ -976,7 +1000,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                       {/* Fullscreen Button */}
                       <button
                         onClick={toggleFullscreen}
-                        className="p-1.5 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                        className="p-1.5 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800 transition shrink-0"
                         title={isVideoFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
                       >
                         {isVideoFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}

@@ -75,7 +75,7 @@ export default function MobileNav({ currentFolderId = null, onCreateFolder }: Mo
           {/* Action Card */}
           <div className="relative bg-slate-900/95 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl p-5 shadow-2xl z-10 space-y-3 pb-8 animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-              <span className="text-sm font-semibold text-white tracking-wide">Create or Upload</span>
+              <span className="text-sm font-semibold text-white tracking-wide">New</span>
               <button
                 onClick={() => setIsMenuOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-white rounded-full bg-white/[0.05]"
@@ -147,7 +147,7 @@ export default function MobileNav({ currentFolderId = null, onCreateFolder }: Mo
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xl shadow-cyan-500/35 border-2 border-white/30 active:scale-95 transition"
-            title="+ New"
+            title="New"
           >
             <Plus className="w-7 h-7 stroke-[2.5]" />
           </button>

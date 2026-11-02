@@ -112,7 +112,7 @@ export default function Sidebar({
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg shadow-cyan-500/25 border border-white/20 active:scale-95 transition duration-200"
           >
             <Plus className="w-5 h-5 stroke-[2.5]" />
-            <span>+ New</span>
+            <span>New</span>
           </button>
 
           {/* Action Menu (Shows ONLY when isNewMenuOpen is true) */}
