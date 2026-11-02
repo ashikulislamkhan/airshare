@@ -95,6 +95,11 @@ export const api = {
     return data.files;
   },
 
+  async getRecentFiles(): Promise<AirShareFile[]> {
+    const files = await this.listFiles(null);
+    return files.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  },
+
   async initFileUpload(payload: {
     name: string;
     totalSizeBytes: number;

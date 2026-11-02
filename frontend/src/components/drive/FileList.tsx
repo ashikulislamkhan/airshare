@@ -95,9 +95,9 @@ export default function FileList({
         <thead>
           <tr className="border-b border-slate-800 text-slate-400 font-semibold">
             <th className="py-2.5 px-3">Name</th>
-            <th className="py-2.5 px-3">Type</th>
+            <th className="py-2.5 px-3 hidden sm:table-cell">Type</th>
             <th className="py-2.5 px-3">Size</th>
-            <th className="py-2.5 px-3">Last Modified</th>
+            <th className="py-2.5 px-3 hidden sm:table-cell">Last Modified</th>
             <th className="py-2.5 px-3 text-right">Actions</th>
           </tr>
         </thead>
@@ -123,9 +123,9 @@ export default function FileList({
                   <Folder className="w-4 h-4 text-amber-400 fill-amber-400/20 flex-shrink-0" />
                   <span className="truncate max-w-sm">{folder.name}</span>
                 </td>
-                <td className="py-2.5 px-3 text-slate-400">Folder</td>
+                <td className="py-2.5 px-3 text-slate-400 hidden sm:table-cell">Folder</td>
                 <td className="py-2.5 px-3 text-slate-400">—</td>
-                <td className="py-2.5 px-3 text-slate-400">{formatDate(folder.updatedAt)}</td>
+                <td className="py-2.5 px-3 text-slate-400 hidden sm:table-cell">{formatDate(folder.updatedAt)}</td>
                 <td className="py-2.5 px-3 text-right">
                   <button
                     onClick={(e) => {
@@ -175,9 +175,9 @@ export default function FileList({
                   <span className="truncate max-w-sm">{file.name}</span>
                   {file.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
                 </td>
-                <td className="py-2.5 px-3 text-slate-400 uppercase font-mono">{file.extension || "FILE"}</td>
+                <td className="py-2.5 px-3 text-slate-400 uppercase font-mono hidden sm:table-cell">{file.extension || "FILE"}</td>
                 <td className="py-2.5 px-3 text-slate-400">{formatBytes(file.totalSizeBytes)}</td>
-                <td className="py-2.5 px-3 text-slate-400">{formatDate(file.updatedAt)}</td>
+                <td className="py-2.5 px-3 text-slate-400 hidden sm:table-cell">{formatDate(file.updatedAt)}</td>
                 <td className="py-2.5 px-3 text-right">
                   <button
                     onClick={(e) => {

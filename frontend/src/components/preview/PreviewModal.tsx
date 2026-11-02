@@ -765,11 +765,21 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
             {category === "video" && (
               <div
                 ref={videoContainerRef}
-                className="relative max-w-5xl w-full bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-800 flex flex-col group select-none"
+                onMouseMove={handleMouseMove}
+                onTouchStart={handleMouseMove}
+                className={`relative ${
+                  isVideoFullscreen
+                    ? "w-screen h-screen max-w-none rounded-none border-none justify-center items-center"
+                    : "max-w-5xl w-full rounded-2xl border border-slate-800 justify-center items-center"
+                } bg-black overflow-hidden shadow-2xl flex flex-col group select-none`}
               >
                 {/* Active Quality Scaling Viewport */}
                 <div className={`w-full flex items-center justify-center transition-all ${
-                  videoQuality === "360p" ? "max-h-[50vh]" : "max-h-[75vh]"
+                  isVideoFullscreen
+                    ? "h-full max-h-screen"
+                    : videoQuality === "360p"
+                    ? "max-h-[50vh]"
+                    : "max-h-[75vh]"
                 }`}>
                   <video
                     ref={videoRef}
@@ -791,7 +801,9 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                     }}
                     onPlay={() => setVideoPlaying(true)}
                     onPause={() => setVideoPlaying(false)}
-                    className="w-full h-full object-contain cursor-pointer max-h-[75vh]"
+                    className={`w-full h-full object-contain cursor-pointer ${
+                      isVideoFullscreen ? "max-h-screen" : "max-h-[75vh]"
+                    }`}
                   />
                 </div>
 
@@ -807,9 +819,13 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                   </div>
                 )}
 
-                {/* Quality & Speed Status Badge (Top Left of Video) */}
-                <div className="absolute top-4 left-4 flex items-center gap-2 pointer-events-none">
-                  <span className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-blue-400 border border-slate-700/60 shadow">
+                {/* Quality & Speed Status Badge (Top Left of Video) - disappears after 3s of inactivity */}
+                <div
+                  className={`absolute top-4 left-4 flex items-center gap-2 pointer-events-none transition-opacity duration-300 ${
+                    controlsVisible || !videoPlaying ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <span className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-cyan-400 border border-slate-700/60 shadow">
                     {VIDEO_QUALITIES.find((q) => q.id === videoQuality)?.label}
                   </span>
                   {videoSpeed !== 1 && (

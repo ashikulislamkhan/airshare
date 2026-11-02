@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import { TransferProvider } from "../context/TransferContext";
@@ -8,6 +8,18 @@ import { ErrorBoundary } from "../components/common/ErrorBoundary";
 export const metadata: Metadata = {
   title: "AirShare — #ShareOnAir",
   description: "Zero-Dollar Cloud Drive with Google Cloud Run & Telegram MTProto",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -17,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased bg-slate-950 text-slate-100 h-screen overflow-hidden">
+      <body className="antialiased bg-[#060b18] text-slate-100 h-screen overflow-hidden">
         <AuthProvider>
           <TransferProvider>
             {children}

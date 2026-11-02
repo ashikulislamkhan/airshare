@@ -189,8 +189,8 @@ export default function FileGrid({
                   }}
                   className={`group relative border rounded-2xl overflow-hidden cursor-pointer transition shadow-sm hover:shadow-lg flex flex-col ${
                     isSelected
-                      ? "bg-blue-600/30 border-blue-500 ring-2 ring-blue-500/50"
-                      : "bg-slate-800/50 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50"
+                      ? "bg-cyan-500/20 border-cyan-400 ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(0,163,255,0.25)]"
+                      : "bg-slate-900/40 backdrop-blur-xl border-white/[0.08] hover:border-cyan-400/40 hover:bg-slate-850/60"
                   }`}
                 >
                   {/* Thumbnail / Icon Container */}

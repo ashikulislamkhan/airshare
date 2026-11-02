@@ -11,7 +11,10 @@ import ContextMenu from "../../components/drive/ContextMenu";
 import PreviewModal from "../../components/preview/PreviewModal";
 import ShareDialog from "../../components/drive/ShareDialog";
 import LoginModal from "../../components/auth/LoginModal";
+import MobileNav from "../../components/layout/MobileNav";
+import { SelectionBox } from "../../components/common/SelectionBox";
 import { ErrorBoundary } from "../../components/common/ErrorBoundary";
+import { useDriveSelection } from "../../hooks/useDriveSelection";
 
 import { useAuth } from "../../context/AuthContext";
 import { useTransfer } from "../../context/TransferContext";
@@ -82,18 +85,7 @@ export default function DrivePage() {
   const [files, setFiles] = useState<AirShareFile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Selection & Clipboard State
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [clipboard, setClipboard] = useState<{ action: "copy"; ids: string[] } | null>(null);
-
-  // Marquee Selection Box State
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [selectionBox, setSelectionBox] = useState<{
-    startX: number;
-    startY: number;
-    currentX: number;
-    currentY: number;
-  } | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // View & Search State
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -271,25 +263,44 @@ export default function DrivePage() {
   const sortedFolders = sortItems(filteredFolders, sortOption);
   const sortedFiles = sortItems(filteredFiles, sortOption);
 
-  // Item Click Selection
-  const handleItemSelect = (
-    e: React.MouseEvent,
-    target: AirShareFile | AirShareFolder,
-    type: "file" | "folder"
-  ) => {
-    e.stopPropagation();
-    if (e.ctrlKey || e.metaKey) {
-      // Toggle individual selection
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(target.id)) next.delete(target.id);
-        else next.add(target.id);
-        return next;
-      });
-    } else {
-      setSelectedIds(new Set([target.id]));
+  const allVisibleItems = [...sortedFolders, ...sortedFiles];
+
+  const handlePasteItems = async (ids: string[]) => {
+    const targetFolderId = currentFolder?.id || null;
+    for (const id of ids) {
+      const isFile = files.some((f) => f.id === id);
+      if (isFile) {
+        await api.updateFile(id, { folderId: targetFolderId });
+      } else {
+        await api.updateFolder(id, { parentFolderId: targetFolderId });
+      }
     }
+    refreshContent();
   };
+
+  const handleDeleteItems = async (ids: string[]) => {
+    for (const id of ids) {
+      const isFile = files.some((f) => f.id === id);
+      if (isFile) await api.trashFile(id);
+      else await api.trashFolder(id);
+    }
+    refreshContent();
+  };
+
+  const {
+    selectedIds,
+    setSelectedIds,
+    selectionBox,
+    containerRef,
+    handleItemSelect,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+  } = useDriveSelection({
+    items: allVisibleItems,
+    onDelete: handleDeleteItems,
+    onPaste: handlePasteItems,
+  });
 
   // Context Menu Handler
   const handleContextMenu = (
@@ -300,7 +311,6 @@ export default function DrivePage() {
     e.preventDefault();
     e.stopPropagation();
 
-    // If right-clicked item is not already in selectedIds, select only it
     let currentSelected = selectedIds;
     if (!selectedIds.has(target.id)) {
       currentSelected = new Set([target.id]);
@@ -315,146 +325,6 @@ export default function DrivePage() {
       selectedCount: currentSelected.size,
     });
   };
-
-  // ─────────────────────────────────────────────────────────────
-  // Marquee Selection Box (Click, hold, and drag mouse)
-  // ─────────────────────────────────────────────────────────────
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only trigger box selection on left mouse button and not on interactive cards
-    if (e.button !== 0) return;
-    const target = e.target as HTMLElement;
-    if (
-      target.closest("[data-selectable-id]") ||
-      target.closest("button") ||
-      target.closest("input") ||
-      target.closest("aside") ||
-      target.closest("header")
-    ) {
-      return;
-    }
-
-    setContextMenu(null);
-    if (!e.ctrlKey && !e.metaKey) {
-      setSelectedIds(new Set());
-    }
-
-    setIsSelecting(true);
-    setSelectionBox({
-      startX: e.clientX,
-      startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-    });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isSelecting || !selectionBox) return;
-
-    const currentX = e.clientX;
-    const currentY = e.clientY;
-
-    setSelectionBox((prev) => (prev ? { ...prev, currentX, currentY } : null));
-
-    const left = Math.min(selectionBox.startX, currentX);
-    const top = Math.min(selectionBox.startY, currentY);
-    const right = Math.max(selectionBox.startX, currentX);
-    const bottom = Math.max(selectionBox.startY, currentY);
-
-    // Compute intersecting cards
-    const selectableElements = document.querySelectorAll("[data-selectable-id]");
-    const intersecting = new Set<string>();
-
-    selectableElements.forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      const hits = !(
-        rect.right < left ||
-        rect.left > right ||
-        rect.bottom < top ||
-        rect.top > bottom
-      );
-      if (hits) {
-        const id = el.getAttribute("data-selectable-id");
-        if (id) intersecting.add(id);
-      }
-    });
-
-    setSelectedIds(intersecting);
-  };
-
-  const handleMouseUp = () => {
-    setIsSelecting(false);
-    setSelectionBox(null);
-  };
-
-  // ─────────────────────────────────────────────────────────────
-  // Keyboard Shortcuts (Ctrl+A, Ctrl+C, Ctrl+V, Delete, Escape)
-  // ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      const activeTag = (document.activeElement?.tagName || "").toLowerCase();
-      if (activeTag === "input" || activeTag === "textarea") return;
-
-      const isCtrl = e.ctrlKey || e.metaKey;
-
-      // Ctrl + A: Select All
-      if (isCtrl && e.key.toLowerCase() === "a") {
-        e.preventDefault();
-        const allIds = new Set<string>([
-          ...filteredFolders.map((f) => f.id),
-          ...filteredFiles.map((f) => f.id),
-        ]);
-        setSelectedIds(allIds);
-      }
-
-      // Ctrl + C: Copy Selected
-      if (isCtrl && e.key.toLowerCase() === "c") {
-        if (selectedIds.size > 0) {
-          e.preventDefault();
-          setClipboard({ action: "copy", ids: Array.from(selectedIds) });
-        }
-      }
-
-      // Ctrl + V: Paste Items to Current Folder
-      if (isCtrl && e.key.toLowerCase() === "v") {
-        if (clipboard && clipboard.ids.length > 0) {
-          e.preventDefault();
-          const targetFolderId = currentFolder?.id || null;
-          for (const id of clipboard.ids) {
-            const isFile = files.some((f) => f.id === id);
-            if (isFile) {
-              await api.updateFile(id, { folderId: targetFolderId });
-            } else {
-              await api.updateFolder(id, { parentFolderId: targetFolderId });
-            }
-          }
-          refreshContent();
-        }
-      }
-
-      // Delete / Backspace: Move Selected to Trash
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedIds.size > 0) {
-          e.preventDefault();
-          for (const id of Array.from(selectedIds)) {
-            const isFile = files.some((f) => f.id === id);
-            if (isFile) await api.trashFile(id);
-            else await api.trashFolder(id);
-          }
-          refreshContent();
-        }
-      }
-
-      // Escape: Clear Selection & Context Menu
-      if (e.key === "Escape") {
-        setSelectedIds(new Set());
-        setContextMenu(null);
-        setSelectionBox(null);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [filteredFolders, filteredFiles, selectedIds, clipboard, currentFolder, files, refreshContent]);
 
   // ─────────────────────────────────────────────────────────────
   // Multi-Item Download Logic (Files one-by-one, Folders as .zip)
@@ -576,20 +446,9 @@ export default function DrivePage() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="flex h-screen w-screen bg-slate-950 overflow-hidden relative select-none"
+      className="flex h-screen w-screen bg-[#060b18] overflow-hidden relative select-none"
     >
-      {/* Marquee Drag Selection Box */}
-      {selectionBox && (
-        <div
-          style={{
-            left: Math.min(selectionBox.startX, selectionBox.currentX),
-            top: Math.min(selectionBox.startY, selectionBox.currentY),
-            width: Math.abs(selectionBox.currentX - selectionBox.startX),
-            height: Math.abs(selectionBox.currentY - selectionBox.startY),
-          }}
-          className="fixed pointer-events-none bg-blue-500/20 border border-blue-400/80 rounded z-40"
-        />
-      )}
+      <SelectionBox selectionBox={selectionBox} />
 
       {/* Drag & Drop Visual Overlay */}
       {isDragOver && (
@@ -605,6 +464,8 @@ export default function DrivePage() {
       <Sidebar
         onCreateFolder={() => setIsNewFolderOpen(true)}
         currentFolderId={currentFolder?.id || null}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Main Workspace */}
@@ -615,10 +476,11 @@ export default function DrivePage() {
           onSearchChange={setSearchQuery}
           viewMode={viewMode}
           onViewModeToggle={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
 
         {/* Content Body */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-4">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 pb-24 md:pb-6">
           {/* Action Toolbar: Breadcrumbs, Refresh, Sort, and Selection Badge */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -746,6 +608,9 @@ export default function DrivePage() {
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNav currentFolderId={currentFolder?.id || null} />
 
       {/* New Folder Modal */}
       <NewFolderModal

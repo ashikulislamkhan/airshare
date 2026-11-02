@@ -1,39 +1,39 @@
 "use client";
 
 import React from "react";
-import { Cloud, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginModal() {
   const { signIn, loading } = useAuth();
 
   return (
-    <div className="fixed inset-0 bg-slate-950 flex items-center justify-center p-4 z-50 select-none">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 z-50 select-none">
       {/* Background ambient gradient glow */}
-      <div className="absolute w-96 h-96 bg-blue-600/10 rounded-full blur-3xl -top-20 -left-20 pointer-events-none" />
-      <div className="absolute w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl -bottom-20 -right-20 pointer-events-none" />
+      <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-20 -left-20 pointer-events-none" />
+      <div className="absolute w-96 h-96 bg-blue-600/15 rounded-full blur-3xl -bottom-20 -right-20 pointer-events-none" />
 
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
-        {/* Brand Icon */}
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
-          <Cloud className="w-8 h-8" />
+      <div className="relative w-full max-w-md bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] text-center space-y-6">
+        {/* Brand Icon (3D Origami Airplane Logo) */}
+        <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-2xl shadow-cyan-500/30 border border-white/20 bg-slate-900 p-1">
+          <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-xl" />
         </div>
 
         {/* Title */}
         <div className="space-y-1.5">
           <h1 className="text-2xl font-bold text-white tracking-tight">AirShare</h1>
-          <p className="text-xs text-blue-400 font-semibold tracking-wide">#ShareOnAir • Cloud v3.0</p>
-          <p className="text-xs text-slate-400 pt-2">
-            Secure personal cloud drive with unlimited Telegram MTProto storage.
+          <p className="text-xs text-cyan-400 font-semibold tracking-wide">#ShareOnAir • Cloud v3.0</p>
+          <p className="text-xs text-slate-300 pt-2 leading-relaxed">
+            Zero-Dollar High Performance Cloud Drive powered by Google Cloud Run & Telegram MTProto Bitstream.
           </p>
         </div>
 
-        {/* Google Sign-In Button */}
+        {/* Google Sign-In Button (iOS Liquid Glass) */}
         <div className="pt-2">
           <button
             onClick={signIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-xl shadow-lg transition duration-200 disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-2xl shadow-lg transition duration-200 disabled:opacity-60 active:scale-98"
           >
             {/* Google G SVG */}
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -54,14 +54,14 @@ export default function LoginModal() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span className="text-sm">Sign in with Google</span>
+            <span>Continue with Google Identity</span>
           </button>
         </div>
 
-        {/* Security badge */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 pt-4 border-t border-slate-800">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Protected by Google Identity & Firebase Auth</span>
+        {/* Security Badge */}
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Secured via Firebase & Telegram MTProto End-to-End</span>
         </div>
       </div>
     </div>
