@@ -20,12 +20,9 @@ export default function LoginModal() {
         </div>
 
         {/* Title */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <h1 className="text-2xl font-bold text-white tracking-tight">AirShare</h1>
-          <p className="text-xs text-cyan-400 font-semibold tracking-wide">AirShare • Cloud Storage v3.0</p>
-          <p className="text-xs text-slate-300 pt-2 leading-relaxed">
-            Zero-Dollar High Performance Cloud Drive powered by Google Cloud Run & Telegram MTProto Bitstream.
-          </p>
+          <p className="text-sm text-cyan-400 font-semibold tracking-wide">#ShareOnAir</p>
         </div>
 
         {/* Google Sign-In Button (iOS Liquid Glass) */}
@@ -33,7 +30,7 @@ export default function LoginModal() {
           <button
             onClick={signIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-2xl shadow-lg transition duration-200 disabled:opacity-60 active:scale-98"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-2xl shadow-lg transition duration-200 disabled:opacity-60 active:scale-98 cursor-pointer"
           >
             {/* Google G SVG */}
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -54,14 +51,14 @@ export default function LoginModal() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Continue with Google Identity</span>
+            <span>Continue with Google</span>
           </button>
         </div>
 
         {/* Security Badge */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+        <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Secured via Firebase & Telegram MTProto End-to-End</span>
+          <span>End-to-End encrypted</span>
         </div>
       </div>
     </div>
