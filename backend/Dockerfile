@@ -23,4 +23,4 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --timeout-keep-alive 3600
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --timeout-keep-alive 3600

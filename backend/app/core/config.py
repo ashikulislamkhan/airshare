@@ -39,9 +39,9 @@ class Settings(BaseSettings):
     TELEGRAM_STORAGE_CHANNELS: str = ""
     
     # Chunking & Streaming Limits
-    # 50 MB per chunk: ensures uploads never hit reverse proxy timeouts (Cloudflare 100s / Render 100s),
-    # fits easily inside Render 512MB RAM bounds, and allows smooth dynamic progress increments.
-    MAX_CHUNK_SIZE_BYTES: int = 52428800  # 50 MB
+    # 10 MB per chunk: more reliable on free-tier hosts, better progress granularity,
+    # avoids timeouts on slow connections. Koyeb/Vercel safe.
+    MAX_CHUNK_SIZE_BYTES: int = 10485760  # 10 MB
     STREAM_BUFFER_SIZE_BYTES: int = 524288  # 512 KB per MTProto part
     
     # Security & Previews

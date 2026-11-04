@@ -1,7 +1,7 @@
 import { getFirebaseIdToken } from "./firebase";
 import { AirShareFile, AirShareFolder, AirShareShare } from "./types";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api").replace(/\/$/, "");
+const API_BASE_URL = "/api";
 
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const token = await getFirebaseIdToken();
