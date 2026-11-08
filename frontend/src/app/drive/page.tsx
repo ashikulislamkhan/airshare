@@ -376,14 +376,7 @@ export default function DrivePage() {
         try {
           if (entry.type === "file") {
             const fileItem = entry.item as AirShareFile;
-            const token = await api.getPreviewToken(fileItem.id);
-            const url = api.getStreamUrl(fileItem.id, token, true);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = fileItem.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            await api.downloadFile(fileItem);
           } else {
             // Folder -> Transforms into .zip and downloads
             const folderItem = entry.item as AirShareFolder;

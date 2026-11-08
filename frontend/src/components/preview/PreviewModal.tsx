@@ -220,8 +220,8 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
     };
   }, [file]);
 
-  const streamUrl = file && token ? api.getStreamUrl(file.id, token, false) : "";
-  const downloadUrl = file && token ? api.getStreamUrl(file.id, token, true) : "";
+  const streamUrl = file && token ? api.getStreamUrl(file, token, false) : "";
+  const downloadUrl = file && token ? api.getStreamUrl(file, token, true) : "";
 
   // Fetch text/code/csv content
   useEffect(() => {
@@ -705,7 +705,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
           {/* Download Button */}
           {downloadUrl && (
             <a
-              href={downloadUrl}
+              href={downloadUrl} onClick={(e) => { if (file?.chunks && file.chunks.length > 1) { e.preventDefault(); api.downloadFile(file); } }}
               download={file.name}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow-md shadow-blue-500/20 transition active:scale-95"
             >
@@ -748,7 +748,7 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                   </p>
                   {downloadUrl && (
                     <a
-                      href={downloadUrl}
+                      href={downloadUrl} onClick={(e) => { if (file?.chunks && file.chunks.length > 1) { e.preventDefault(); api.downloadFile(file); } }}
                       download={file.name}
                       className="mt-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow shadow-blue-500/20"
                     >

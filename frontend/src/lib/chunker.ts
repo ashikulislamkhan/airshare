@@ -1,11 +1,11 @@
-import { getFirebaseIdToken } from "./firebase";
 import { api } from "./api";
+import { db } from "./firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
-// 50 MB chunk limit: ensures uploads never hit proxy timeouts and increment smoothly
-export const MAX_CHUNK_SIZE_BYTES = 52428800; // 50 MB 
-
-// Transfer chunk slice size (can be tuned for network resilience: 50MB - 100MB slices)
-export const UPLOAD_SLICE_SIZE = 50 * 1024 * 1024; // 50 MB
+// 19 MB chunk size: safely below Telegram Bot API's 20 MB download & 50 MB upload limits
+export const CHUNK_SIZE_BYTES = 19 * 1024 * 1024;
+export const MAX_CHUNK_SIZE_BYTES = CHUNK_SIZE_BYTES;
+export const UPLOAD_SLICE_SIZE = CHUNK_SIZE_BYTES;
 
 export interface UploadProgressCallback {
   (progress: {
@@ -16,6 +16,15 @@ export interface UploadProgressCallback {
     currentChunkIndex: number;
     totalChunks: number;
   }): void;
+}
+
+interface UploadedChunkResult {
+  chunkIndex: number;
+  startByte: number;
+  endByte: number;
+  sizeBytes: number;
+  telegramFileId: string;
+  telegramMessageId?: number;
 }
 
 export class DirectCloudRunUploader {
@@ -39,10 +48,8 @@ export class DirectCloudRunUploader {
 
   public async start(): Promise<string> {
     const totalSize = this.file.size;
-    const token = await getFirebaseIdToken();
-    if (!token) throw new Error("Authentication required. Please sign in.");
 
-    // Step 1: Initialize upload record on Cloud Run
+    // Step 1: Initialize metadata directly in Firestore
     const initResponse = await api.initFileUpload({
       name: this.file.name,
       totalSizeBytes: totalSize,
@@ -51,91 +58,94 @@ export class DirectCloudRunUploader {
     });
 
     const fileId = initResponse.file.id;
-    const maxChunkBytes = initResponse.maxChunkSizeBytes || MAX_CHUNK_SIZE_BYTES;
-    const totalChunks = Math.max(1, Math.ceil(totalSize / maxChunkBytes));
+    const chunkSize = CHUNK_SIZE_BYTES;
+    const totalChunks = Math.max(1, Math.ceil(totalSize / chunkSize));
 
-    let totalUploadedBytes = 0;
+    const WORKER_URL = (
+      process.env.NEXT_PUBLIC_WORKER_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "https://airshare-storage.ashikkhaninc.workers.dev"
+    ).replace(/\/$/, "");
+
+    // Track progress across parallel streams
+    const chunkBytesUploaded = new Array<number>(totalChunks).fill(0);
     let lastTime = Date.now();
     let bytesSinceLastTime = 0;
     let smoothedSpeed = 0;
 
-    const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "https://airshare-backend-9zj7.onrender.com/api").replace(/\/$/, "");
-
-    // Step 2: Slice and stream each chunk directly to Cloud Run
-    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-      if (this.isPaused) {
-        throw new Error("Upload paused by user.");
+    const notifyProgress = (delta: number) => {
+      const currentUploaded = chunkBytesUploaded.reduce((a, b) => a + b, 0);
+      const now = Date.now();
+      const timeElapsedSec = (now - lastTime) / 1000;
+      if (timeElapsedSec >= 0.4) {
+        const instantSpeed = (bytesSinceLastTime + delta) / timeElapsedSec;
+        smoothedSpeed = smoothedSpeed === 0 ? instantSpeed : 0.7 * smoothedSpeed + 0.3 * instantSpeed;
+        lastTime = now;
+        bytesSinceLastTime = 0;
+      } else {
+        bytesSinceLastTime += delta;
       }
 
-      const start = chunkIndex * maxChunkBytes;
-      const end = Math.min(start + maxChunkBytes, totalSize);
-      const chunkSize = end - start;
+      if (this.onProgress) {
+        this.onProgress({
+          uploadedBytes: Math.min(currentUploaded, totalSize),
+          totalBytes: totalSize,
+          percent: Math.min(99, Math.round((currentUploaded / totalSize) * 100)),
+          speedBytesPerSec: smoothedSpeed,
+          currentChunkIndex: chunkBytesUploaded.filter((b) => b > 0).length,
+          totalChunks,
+        });
+      }
+    };
+
+    // Step 2: Upload single chunk with retry
+    const uploadSingleChunk = async (chunkIndex: number): Promise<UploadedChunkResult> => {
+      const start = chunkIndex * chunkSize;
+      const end = Math.min(start + chunkSize, totalSize);
+      const partSize = end - start;
       const chunkBlob = this.file.slice(start, end);
 
-      // Retry loop per chunk (max 3 attempts)
       let attempt = 0;
-      let success = false;
-
-      const baseUploadedBytes = totalUploadedBytes;
-      let activeXhr: XMLHttpRequest | null = null;
-
-      while (attempt < 3 && !success) {
+      while (attempt < 3) {
+        if (this.isPaused) throw new Error("Upload paused by user.");
         attempt++;
         try {
-          const freshToken = await getFirebaseIdToken();
-          let chunkUploadedBytes = 0;
+          let lastLoaded = 0;
 
-          await new Promise<void>((resolve, reject) => {
+          const result = await new Promise<{ file_id: string; message_id?: number }>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            activeXhr = xhr;
-            xhr.open("POST", `${API_BASE_URL}/files/${fileId}/upload-chunk`);
-            xhr.setRequestHeader("Authorization", `Bearer ${freshToken}`);
-            xhr.setRequestHeader("X-Chunk-Index", chunkIndex.toString());
-            xhr.setRequestHeader("X-Chunk-Size", chunkSize.toString());
-            xhr.setRequestHeader("Content-Type", "application/octet-stream");
+            xhr.open("POST", `${WORKER_URL}/api/upload-chunk`);
 
             const abortHandler = () => {
               xhr.abort();
-              reject(new Error("Upload paused by user."));
+              reject(new Error("Upload aborted."));
             };
             this.abortController.signal.addEventListener("abort", abortHandler, { once: true });
 
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) {
-                const delta = event.loaded - chunkUploadedBytes;
-                chunkUploadedBytes = event.loaded;
-                totalUploadedBytes = baseUploadedBytes + event.loaded;
-
-                const now = Date.now();
-                const timeElapsedSec = (now - lastTime) / 1000;
-                if (timeElapsedSec >= 0.5) {
-                  const instantSpeed = (bytesSinceLastTime + delta) / timeElapsedSec;
-                  smoothedSpeed = smoothedSpeed === 0 ? instantSpeed : 0.7 * smoothedSpeed + 0.3 * instantSpeed;
-                  lastTime = now;
-                  bytesSinceLastTime = 0;
-                } else {
-                  bytesSinceLastTime += delta;
-                }
-
-                if (this.onProgress) {
-                  this.onProgress({
-                    uploadedBytes: totalUploadedBytes,
-                    totalBytes: totalSize,
-                    percent: Math.min(99, Math.round((totalUploadedBytes / totalSize) * 100)),
-                    speedBytesPerSec: smoothedSpeed,
-                    currentChunkIndex: chunkIndex + 1,
-                    totalChunks,
-                  });
-                }
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                const delta = e.loaded - lastLoaded;
+                lastLoaded = e.loaded;
+                chunkBytesUploaded[chunkIndex] = e.loaded;
+                notifyProgress(delta);
               }
             };
 
             xhr.onload = () => {
               this.abortController.signal.removeEventListener("abort", abortHandler);
               if (xhr.status >= 200 && xhr.status < 300) {
-                resolve();
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  if (data.status === "success" && data.file_id) {
+                    resolve(data);
+                  } else {
+                    reject(new Error(data.error || "Upload failed"));
+                  }
+                } catch (parseErr) {
+                  reject(new Error("Invalid worker response"));
+                }
               } else {
-                reject(new Error(`Upload error (${xhr.status}): ${xhr.responseText || xhr.statusText}`));
+                reject(new Error(`Worker error (${xhr.status}): ${xhr.responseText}`));
               }
             };
 
@@ -144,34 +154,75 @@ export class DirectCloudRunUploader {
               reject(new Error("Network error during upload"));
             };
 
-            xhr.onabort = () => {
-              this.abortController.signal.removeEventListener("abort", abortHandler);
-              reject(new Error("Upload aborted"));
-            };
+            const formData = new FormData();
+            formData.append("chunk", chunkBlob, `${this.file.name}.part${chunkIndex}`);
+            formData.append("fileName", this.file.name);
+            formData.append("chunkIndex", chunkIndex.toString());
 
-            xhr.send(chunkBlob);
+            xhr.send(formData);
           });
 
-          success = true;
-          totalUploadedBytes = baseUploadedBytes + chunkSize;
+          chunkBytesUploaded[chunkIndex] = partSize;
+          notifyProgress(0);
 
-          if (this.onProgress) {
-            this.onProgress({
-              uploadedBytes: totalUploadedBytes,
-              totalBytes: totalSize,
-              percent: Math.round((totalUploadedBytes / totalSize) * 100),
-              speedBytesPerSec: smoothedSpeed,
-              currentChunkIndex: chunkIndex + 1,
-              totalChunks,
-            });
-          }
+          return {
+            chunkIndex,
+            startByte: start,
+            endByte: end,
+            sizeBytes: partSize,
+            telegramFileId: result.file_id,
+            telegramMessageId: result.message_id,
+          };
         } catch (err: any) {
           if (this.isPaused) throw err;
           console.warn(`Chunk ${chunkIndex} failed (Attempt ${attempt}/3):`, err);
           if (attempt >= 3) throw err;
-          await new Promise((res) => setTimeout(res, 2000 * attempt));
+          await new Promise((res) => setTimeout(res, 1000 * attempt));
         }
       }
+      throw new Error(`Failed to upload chunk ${chunkIndex} after 3 attempts.`);
+    };
+
+    // Step 3: Concurrency Worker Pool (3 Parallel Upload Streams)
+    const CONCURRENCY = 3;
+    const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);
+    const uploadedChunks: UploadedChunkResult[] = new Array(totalChunks);
+
+    const pool = async () => {
+      while (chunkIndices.length > 0) {
+        if (this.isPaused) throw new Error("Upload paused by user.");
+        const nextIndex = chunkIndices.shift();
+        if (nextIndex === undefined) break;
+        const res = await uploadSingleChunk(nextIndex);
+        uploadedChunks[nextIndex] = res;
+      }
+    };
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY, totalChunks) }, () => pool());
+    await Promise.all(workers);
+
+    // Step 4: Finalize file record in Firestore
+    const fileRef = doc(db, "files", fileId);
+    await updateDoc(fileRef, {
+      status: "completed",
+      telegramFileId: uploadedChunks[0]?.telegramFileId || "",
+      chunks: uploadedChunks,
+      updatedAt: Date.now(),
+    });
+
+    if (this.onProgress) {
+      this.onProgress({
+        uploadedBytes: totalSize,
+        totalBytes: totalSize,
+        percent: 100,
+        speedBytesPerSec: smoothedSpeed,
+        currentChunkIndex: totalChunks,
+        totalChunks,
+      });
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("airshare:upload-complete", { detail: { fileId } }));
     }
 
     return fileId;

@@ -1,98 +1,184 @@
-import { getFirebaseIdToken } from "./firebase";
+import { auth, db } from "./firebase";
+import { 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit,
+  increment
+} from "firebase/firestore";
 import { AirShareFile, AirShareFolder, AirShareShare } from "./types";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "https://airshare-backend-9zj7.onrender.com/api").replace(/\/$/, "");
+const WORKER_URL = (
+  process.env.NEXT_PUBLIC_WORKER_URL || 
+  process.env.NEXT_PUBLIC_API_URL || 
+  "https://airshare-storage.ashikkhaninc.workers.dev"
+).replace(/\/$/, "");
 
-async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const token = await getFirebaseIdToken();
-  const headers = new Headers(options.headers || {});
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+export function detectFileType(mime: string = "", name: string = ""): AirShareFile["fileType"] {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  const m = mime.toLowerCase();
+  if (m.startsWith("image/") || ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "avif"].includes(ext)) {
+    return "image";
   }
-
-  const url = `${API_BASE_URL}${endpoint}`;
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok && response.status === 401) {
-    // Optionally trigger auth refresh
-    console.error("Unauthorized request to Cloud Run backend");
+  if (m.startsWith("video/") || ["mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v"].includes(ext)) {
+    return "video";
   }
-
-  return response;
+  if (m.startsWith("audio/") || ["mp3", "wav", "flac", "ogg", "m4a", "aac", "opus"].includes(ext)) {
+    return "audio";
+  }
+  if (ext === "pdf" || m.includes("pdf")) {
+    return "pdf";
+  }
+  if (["doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv"].includes(ext)) {
+    return "office";
+  }
+  if (["txt", "log", "md", "json", "js", "ts", "py", "html", "css", "sql"].includes(ext)) {
+    return "text";
+  }
+  return "other";
 }
 
 export const api = {
-  // User Profile
+  // ─────────────────────────────────────────────────────────────
+  // USER PROFILE
+  // ─────────────────────────────────────────────────────────────
   async syncUser() {
-    const res = await fetchWithAuth("/users/sync", { method: "POST" });
-    if (!res.ok) throw new Error("Failed to sync user profile");
-    return res.json();
+    const user = auth.currentUser;
+    if (!user) return null;
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+    const now = Date.now();
+    if (snap.exists()) {
+      await updateDoc(userRef, {
+        displayName: user.displayName || "User",
+        photoURL: user.photoURL || "",
+        lastLoginAt: now,
+      });
+      return snap.data();
+    } else {
+      const newUser = {
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || "User",
+        photoURL: user.photoURL || "",
+        storageUsedBytes: 0,
+        createdAt: now,
+        lastLoginAt: now,
+      };
+      await setDoc(userRef, newUser);
+      return newUser;
+    }
   },
 
-  // Folders
+  // ─────────────────────────────────────────────────────────────
+  // FOLDERS
+  // ─────────────────────────────────────────────────────────────
   async listFolders(parentFolderId: string | null = null): Promise<AirShareFolder[]> {
-    const query = parentFolderId ? `?parent_folder_id=${encodeURIComponent(parentFolderId)}` : "";
-    const res = await fetchWithAuth(`/folders${query}`);
-    if (!res.ok) throw new Error("Failed to fetch folders");
-    const data = await res.json();
-    return data.folders;
+    const user = auth.currentUser;
+    if (!user) return [];
+
+    const q = query(
+      collection(db, "folders"),
+      where("ownerUid", "==", user.uid),
+      where("isTrash", "==", false),
+      where("parentFolderId", "==", parentFolderId)
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => d.data() as AirShareFolder);
   },
 
   async createFolder(name: string, parentFolderId: string | null = null): Promise<AirShareFolder> {
-    const res = await fetchWithAuth("/folders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, parentFolderId }),
-    });
-    if (!res.ok) throw new Error("Failed to create folder");
-    const data = await res.json();
-    return data.folder;
+    const user = auth.currentUser;
+    if (!user) throw new Error("Authentication required");
+
+    const folderId = crypto.randomUUID();
+    const now = Date.now();
+
+    let path = `/${name}`;
+    if (parentFolderId) {
+      const parentDoc = await getDoc(doc(db, "folders", parentFolderId));
+      if (parentDoc.exists()) {
+        path = `${parentDoc.data().path || ""}/${name}`;
+      }
+    }
+
+    const folderData: AirShareFolder = {
+      id: folderId,
+      name,
+      parentFolderId,
+      ownerUid: user.uid,
+      path,
+      isStarred: false,
+      isTrash: false,
+      deletedAt: null,
+      deletedByUid: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await setDoc(doc(db, "folders", folderId), folderData);
+    return folderData;
   },
 
   async updateFolder(folderId: string, updates: Partial<AirShareFolder>) {
-    const res = await fetchWithAuth(`/folders/${folderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
+    const folderRef = doc(db, "folders", folderId);
+    await updateDoc(folderRef, {
+      ...updates,
+      updatedAt: Date.now(),
     });
-    return res.json();
+    return { status: "success" };
   },
 
   async trashFolder(folderId: string) {
-    const res = await fetchWithAuth(`/folders/${folderId}`, { method: "DELETE" });
-    return res.json();
+    const user = auth.currentUser;
+    const folderRef = doc(db, "folders", folderId);
+    await updateDoc(folderRef, {
+      isTrash: true,
+      deletedAt: Date.now(),
+      deletedByUid: user?.uid || null,
+      updatedAt: Date.now(),
+    });
+    return { status: "success" };
   },
 
   async getFolderPreviewToken(folderId: string): Promise<string> {
-    const res = await fetchWithAuth(`/folders/${folderId}/preview-token`);
-    if (!res.ok) throw new Error("Failed to get folder token");
-    const data = await res.json();
-    return data.token;
+    return folderId;
   },
 
   getFolderZipUrl(folderId: string, token?: string): string {
-    const base = API_BASE_URL.startsWith("http")
-      ? API_BASE_URL
-      : (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000") + API_BASE_URL;
-    const url = new URL(`${base}/folders/${folderId}/zip`);
-    if (token) url.searchParams.append("token", token);
-    return url.toString();
+    return `${WORKER_URL}/api/stream/${folderId}`;
   },
 
-  // Files
+  // ─────────────────────────────────────────────────────────────
+  // FILES
+  // ─────────────────────────────────────────────────────────────
   async listFiles(folderId: string | null = null, starred?: boolean): Promise<AirShareFile[]> {
-    const params = new URLSearchParams();
-    if (folderId) params.append("folder_id", folderId);
-    if (starred !== undefined) params.append("starred", String(starred));
+    const user = auth.currentUser;
+    if (!user) return [];
 
-    const res = await fetchWithAuth(`/files?${params.toString()}`);
-    if (!res.ok) throw new Error("Failed to fetch files");
-    const data = await res.json();
-    return data.files;
+    const constraints = [
+      where("ownerUid", "==", user.uid),
+      where("isTrash", "==", false),
+    ];
+
+    if (folderId !== null && folderId !== undefined) {
+      constraints.push(where("folderId", "==", folderId));
+    }
+    if (starred !== undefined) {
+      constraints.push(where("isStarred", "==", starred));
+    }
+
+    const q = query(collection(db, "files"), ...constraints);
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => d.data() as AirShareFile);
   },
 
   async getRecentFiles(): Promise<AirShareFile[]> {
@@ -106,71 +192,183 @@ export const api = {
     folderId: string | null;
     mimeType?: string;
   }) {
-    const res = await fetchWithAuth("/files/init", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error("Failed to initialize file upload");
-    return res.json();
+    const user = auth.currentUser;
+    if (!user) throw new Error("Authentication required");
+
+    const fileId = crypto.randomUUID();
+    const versionId = crypto.randomUUID();
+    const now = Date.now();
+    const ext = (payload.name.split(".").pop() || "").toLowerCase();
+    const mime = payload.mimeType || "application/octet-stream";
+    const fType = detectFileType(mime, payload.name);
+
+    // 19.5 MB per chunk for safe Telegram Bot API streaming
+    const CHUNK_SIZE = 19 * 1024 * 1024;
+    const totalChunks = Math.max(1, Math.ceil(payload.totalSizeBytes / CHUNK_SIZE));
+
+    const fileData: AirShareFile = {
+      id: fileId,
+      name: payload.name,
+      extension: ext,
+      mimeType: mime,
+      fileType: fType,
+      totalSizeBytes: payload.totalSizeBytes,
+      folderId: payload.folderId,
+      ownerUid: user.uid,
+      activeVersionId: versionId,
+      totalChunks,
+      isStarred: false,
+      isTrash: false,
+      deletedAt: null,
+      deletedByUid: null,
+      createdAt: now,
+      updatedAt: now,
+      lastOpenedAt: now,
+      preview: {
+        hasThumbnail: false,
+        thumbnailMsgId: null,
+        thumbnailChannelId: null,
+      },
+    };
+
+    await setDoc(doc(db, "files", fileId), fileData);
+
+    // Increment user storage
+    const userRef = doc(db, "users", user.uid);
+    await setDoc(userRef, { storageUsedBytes: increment(payload.totalSizeBytes) }, { merge: true });
+
+    return {
+      file: fileData,
+      maxChunkSizeBytes: CHUNK_SIZE,
+      totalChunks,
+    };
   },
 
   async updateFile(fileId: string, updates: Partial<AirShareFile>) {
-    const res = await fetchWithAuth(`/files/${fileId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
+    const fileRef = doc(db, "files", fileId);
+    await updateDoc(fileRef, {
+      ...updates,
+      updatedAt: Date.now(),
     });
-    return res.json();
+    return { status: "success" };
   },
 
   async trashFile(fileId: string) {
-    const res = await fetchWithAuth(`/files/${fileId}`, { method: "DELETE" });
-    return res.json();
+    const user = auth.currentUser;
+    const fileRef = doc(db, "files", fileId);
+    await updateDoc(fileRef, {
+      isTrash: true,
+      deletedAt: Date.now(),
+      deletedByUid: user?.uid || null,
+      updatedAt: Date.now(),
+    });
+    return { status: "success" };
+  },
+
+  async getFile(fileId: string): Promise<AirShareFile | null> {
+    const snap = await getDoc(doc(db, "files", fileId));
+    if (!snap.exists()) return null;
+    return snap.data() as AirShareFile;
   },
 
   async getPreviewToken(fileId: string): Promise<string> {
-    try {
-      const res = await fetchWithAuth(`/files/${fileId}/preview-token`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) return data.token;
-      }
-    } catch (e) {
-      console.warn("getPreviewToken endpoint failed, falling back to Firebase token", e);
+    return fileId;
+  },
+
+  getStreamUrl(fileOrId: AirShareFile | string, token?: string, download: boolean = false): string {
+    let tgId = "";
+    if (typeof fileOrId === "object" && fileOrId !== null) {
+      tgId = fileOrId.telegramFileId || fileOrId.chunks?.[0]?.telegramFileId || fileOrId.id;
+    } else {
+      tgId = fileOrId;
     }
-    const token = await getFirebaseIdToken();
-    return token || "";
+    return `${WORKER_URL}/api/stream/${tgId}`;
   },
 
-  getStreamUrl(fileId: string, token?: string, download: boolean = false): string {
-    const base = API_BASE_URL.startsWith("http")
-      ? API_BASE_URL
-      : (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000") + API_BASE_URL;
-    const url = new URL(`${base}/files/${fileId}/stream`);
-    if (token) url.searchParams.append("token", token);
-    if (download) url.searchParams.append("download", "true");
-    return url.toString();
+  async downloadFile(file: AirShareFile, onProgress?: (percent: number) => void): Promise<void> {
+    if (!file.chunks || file.chunks.length <= 1) {
+      const tgId = file.telegramFileId || file.chunks?.[0]?.telegramFileId || file.id;
+      const url = `${WORKER_URL}/api/stream/${tgId}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    // Multi-chunk parallel/sequential reassembly
+    const chunks = [...file.chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+    const chunkBlobs: Blob[] = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const res = await fetch(`${WORKER_URL}/api/stream/${chunk.telegramFileId}`);
+      if (!res.ok) throw new Error(`Failed to download part ${i + 1}/${chunks.length}`);
+      const blob = await res.blob();
+      chunkBlobs.push(blob);
+      if (onProgress) {
+        onProgress(Math.round(((i + 1) / chunks.length) * 100));
+      }
+    }
+
+    const fullBlob = new Blob(chunkBlobs, { type: file.mimeType || "application/octet-stream" });
+    const blobUrl = URL.createObjectURL(fullBlob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
   },
 
-  // Trash
-  async getTrash() {
-    const res = await fetchWithAuth("/trash");
-    if (!res.ok) throw new Error("Failed to fetch trash");
-    return res.json();
+  // ─────────────────────────────────────────────────────────────
+  // TRASH
+  // ─────────────────────────────────────────────────────────────
+  async getTrash(): Promise<{ files: AirShareFile[]; folders: AirShareFolder[] }> {
+    const user = auth.currentUser;
+    if (!user) return { files: [], folders: [] };
+
+    const qFiles = query(
+      collection(db, "files"),
+      where("ownerUid", "==", user.uid),
+      where("isTrash", "==", true)
+    );
+    const qFolders = query(
+      collection(db, "folders"),
+      where("ownerUid", "==", user.uid),
+      where("isTrash", "==", true)
+    );
+
+    const [fSnap, foSnap] = await Promise.all([getDocs(qFiles), getDocs(qFolders)]);
+    return {
+      files: fSnap.docs.map((d) => d.data() as AirShareFile),
+      folders: foSnap.docs.map((d) => d.data() as AirShareFolder),
+    };
   },
 
   async restoreItem(targetType: "file" | "folder", targetId: string) {
-    const res = await fetchWithAuth(`/trash/restore/${targetType}/${targetId}`, { method: "POST" });
-    return res.json();
+    const collName = targetType === "file" ? "files" : "folders";
+    await updateDoc(doc(db, collName, targetId), {
+      isTrash: false,
+      deletedAt: null,
+      deletedByUid: null,
+      updatedAt: Date.now(),
+    });
+    return { status: "success" };
   },
 
   async permanentDeleteItem(targetType: "file" | "folder", targetId: string) {
-    const res = await fetchWithAuth(`/trash/permanent/${targetType}/${targetId}`, { method: "DELETE" });
-    return res.json();
+    const collName = targetType === "file" ? "files" : "folders";
+    await deleteDoc(doc(db, collName, targetId));
+    return { status: "success" };
   },
 
-  // Shares
+  // ─────────────────────────────────────────────────────────────
+  // SHARES
+  // ─────────────────────────────────────────────────────────────
   async createShare(payload: {
     targetType: "file" | "folder";
     targetId: string;
@@ -179,18 +377,52 @@ export const api = {
     allowDownload: boolean;
     sharedWithEmails?: string[];
   }): Promise<{ share: AirShareShare }> {
-    const res = await fetchWithAuth("/shares", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error("Failed to create share");
-    return res.json();
+    const user = auth.currentUser;
+    if (!user) throw new Error("Authentication required");
+
+    const shareId = crypto.randomUUID();
+    const shareData: AirShareShare = {
+      id: shareId,
+      targetType: payload.targetType,
+      targetId: payload.targetId,
+      ownerUid: user.uid,
+      isPublic: payload.isPublic,
+      accessLevel: payload.accessLevel,
+      allowDownload: payload.allowDownload,
+      sharedWithEmails: payload.sharedWithEmails || [],
+      createdAt: Date.now(),
+    };
+
+    await setDoc(doc(db, "shares", shareId), shareData);
+    return { share: shareData };
   },
 
   async getSharedWithMe() {
-    const res = await fetchWithAuth("/shares/shared-with-me");
-    if (!res.ok) throw new Error("Failed to fetch shared items");
-    return res.json();
+    const user = auth.currentUser;
+    if (!user || !user.email) return { files: [], folders: [] };
+
+    const q = query(
+      collection(db, "shares"),
+      where("sharedWithEmails", "array-contains", user.email)
+    );
+    const snap = await getDocs(q);
+    const shares = snap.docs.map((d) => d.data() as AirShareShare);
+
+    const fileIds = shares.filter((s) => s.targetType === "file").map((s) => s.targetId);
+    const folderIds = shares.filter((s) => s.targetType === "folder").map((s) => s.targetId);
+
+    const files: AirShareFile[] = [];
+    for (const id of fileIds) {
+      const d = await getDoc(doc(db, "files", id));
+      if (d.exists()) files.push(d.data() as AirShareFile);
+    }
+
+    const folders: AirShareFolder[] = [];
+    for (const id of folderIds) {
+      const d = await getDoc(doc(db, "folders", id));
+      if (d.exists()) folders.push(d.data() as AirShareFolder);
+    }
+
+    return { files, folders };
   },
 };

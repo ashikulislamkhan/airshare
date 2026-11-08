@@ -72,14 +72,7 @@ export default function SharedPage() {
     for (const id of ids) {
       const file = sharedFiles.find((f) => f.id === id);
       if (file) {
-        const token = await api.getPreviewToken(file.id);
-        const url = api.getStreamUrl(file.id, token, true);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        await api.downloadFile(file);
       }
     }
   };

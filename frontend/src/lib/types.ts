@@ -41,6 +41,15 @@ export interface AirShareFile {
   createdAt: number;
   updatedAt: number;
   lastOpenedAt: number;
+  telegramFileId?: string;
+  chunks?: Array<{
+    chunkIndex: number;
+    startByte: number;
+    endByte: number;
+    sizeBytes: number;
+    telegramFileId: string;
+    telegramMessageId?: number;
+  }>;
   preview: {
     hasThumbnail: boolean;
     thumbnailMsgId: number | null;
