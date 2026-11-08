@@ -12,7 +12,7 @@ export default function LoginModal() {
       <div className="relative w-full max-w-sm bg-slate-900/90 border border-white/[0.08] rounded-2xl p-7 shadow-2xl text-center space-y-6">
         {/* Brand Icon */}
         <div className="w-16 h-16 mx-auto rounded-xl overflow-hidden border border-white/10 bg-slate-950 p-1">
-          <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-lg" />
+          <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`} alt="AirShare" className="w-full h-full object-cover rounded-lg" />
         </div>
 
         {/* Title */}

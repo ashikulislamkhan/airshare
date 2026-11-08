@@ -38,7 +38,7 @@ export default function Header({
 
         <div className="flex items-center gap-2 md:hidden">
           <div className="w-7 h-7 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-slate-900 p-0.5">
-            <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-md" />
+            <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`} alt="AirShare" className="w-full h-full object-cover rounded-md" />
           </div>
         </div>
       </div>

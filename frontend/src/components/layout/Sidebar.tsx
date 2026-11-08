@@ -84,7 +84,7 @@ export default function Sidebar({
       <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.08]">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-slate-900 p-0.5">
-            <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-md" />
+            <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`} alt="AirShare" className="w-full h-full object-cover rounded-md" />
           </div>
           <div>
             <h1 className="font-medium text-sm text-slate-100 tracking-tight leading-none">
