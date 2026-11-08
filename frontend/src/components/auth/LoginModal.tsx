@@ -1,15 +1,15 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginModal() {
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, authError } = useAuth();
 
   return (
     <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">
-      <div className="relative w-full max-w-sm bg-slate-900/90 border border-white/[0.08] rounded-2xl p-7 shadow-2xl text-center space-y-6">
+      <div className="relative w-full max-w-sm bg-slate-900/90 border border-white/[0.08] rounded-2xl p-7 shadow-2xl text-center space-y-5">
         {/* Brand Icon */}
         <div className="w-16 h-16 mx-auto rounded-xl overflow-hidden border border-white/10 bg-slate-950 p-1">
           <img src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/logo.png`} alt="AirShare" className="w-full h-full object-cover rounded-lg" />
@@ -20,6 +20,14 @@ export default function LoginModal() {
           <h1 className="text-xl font-semibold text-slate-100 tracking-tight">AirShare</h1>
           <p className="text-xs text-sky-400 font-medium tracking-wide">#ShareOnAir</p>
         </div>
+
+        {/* Error notification if domain or auth is blocked */}
+        {authError && (
+          <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-left flex items-start gap-2 text-rose-300 text-xs">
+            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+            <p className="leading-snug text-[11px]">{authError}</p>
+          </div>
+        )}
 
         {/* Google Sign-In Button */}
         <div className="pt-1">
@@ -47,7 +55,7 @@ export default function LoginModal() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Continue with Google</span>
+            <span>{loading ? "Signing in..." : "Continue with Google"}</span>
           </button>
         </div>
 
