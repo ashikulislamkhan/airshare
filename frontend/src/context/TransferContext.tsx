@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { UploadTask, DownloadTask } from "../lib/types";
-import { DirectCloudRunUploader } from "../lib/chunker";
+import { DirectCloudRunUploader, CHUNK_SIZE_BYTES } from "../lib/chunker";
 
 interface TransferContextType {
   uploadTasks: UploadTask[];
@@ -43,6 +43,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
                   progressPercent: progress.percent,
                   speedBytesPerSec: progress.speedBytesPerSec,
                   chunksUploaded: progress.currentChunkIndex,
+                  chunksTotal: progress.totalChunks || t.chunksTotal,
                 }
               : t
           )
@@ -92,7 +93,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
       totalBytes: file.size,
       speedBytesPerSec: 0,
       status: "queued",
-      chunksTotal: Math.max(1, Math.ceil(file.size / 52428800)),
+      chunksTotal: Math.max(1, Math.ceil(file.size / CHUNK_SIZE_BYTES)),
       chunksUploaded: 0,
     }));
 

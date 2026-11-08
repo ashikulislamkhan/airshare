@@ -98,7 +98,7 @@ export class DirectCloudRunUploader {
       }
     };
 
-    // Step 2: Upload single chunk with retry
+    // Step 2: Upload single chunk with robust retry & 429 rate-limit backoff
     const uploadSingleChunk = async (chunkIndex: number): Promise<UploadedChunkResult> => {
       const start = chunkIndex * chunkSize;
       const end = Math.min(start + chunkSize, totalSize);
@@ -106,15 +106,20 @@ export class DirectCloudRunUploader {
       const chunkBlob = this.file.slice(start, end);
 
       let attempt = 0;
-      while (attempt < 3) {
-        if (this.isPaused) throw new Error("Upload paused by user.");
+      const MAX_ATTEMPTS = 6;
+
+      while (attempt < MAX_ATTEMPTS) {
+        if (this.isPaused) throw new Error("Upload cancelled or aborted.");
         attempt++;
+        let waitTimeMs = 1000 * Math.pow(1.5, attempt);
+
         try {
           let lastLoaded = 0;
 
           const result = await new Promise<{ file_id: string; message_id?: number }>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open("POST", `${WORKER_URL}/api/upload-chunk`);
+            xhr.timeout = 180000; // 3 minute timeout per chunk
 
             const abortHandler = () => {
               xhr.abort();
@@ -144,9 +149,22 @@ export class DirectCloudRunUploader {
                 } catch (parseErr) {
                   reject(new Error("Invalid worker response"));
                 }
+              } else if (xhr.status === 429) {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  if (data.retryAfter) {
+                    waitTimeMs = (data.retryAfter + 1) * 1000;
+                  }
+                } catch (e) {}
+                reject(new Error("Telegram rate limit (429)"));
               } else {
                 reject(new Error(`Worker error (${xhr.status}): ${xhr.responseText}`));
               }
+            };
+
+            xhr.ontimeout = () => {
+              this.abortController.signal.removeEventListener("abort", abortHandler);
+              reject(new Error("Upload chunk timed out"));
             };
 
             xhr.onerror = () => {
@@ -175,22 +193,26 @@ export class DirectCloudRunUploader {
           };
         } catch (err: any) {
           if (this.isPaused) throw err;
-          console.warn(`Chunk ${chunkIndex} failed (Attempt ${attempt}/3):`, err);
-          if (attempt >= 3) throw err;
-          await new Promise((res) => setTimeout(res, 1000 * attempt));
+          console.warn(`Chunk ${chunkIndex + 1}/${totalChunks} retry ${attempt}/${MAX_ATTEMPTS}:`, err.message || err);
+          if (attempt >= MAX_ATTEMPTS) {
+            this.isPaused = true; // Signal all concurrent workers to stop
+            this.abortController.abort();
+            throw err;
+          }
+          await new Promise((res) => setTimeout(res, waitTimeMs));
         }
       }
-      throw new Error(`Failed to upload chunk ${chunkIndex} after 3 attempts.`);
+      throw new Error(`Failed to upload chunk ${chunkIndex + 1}/${totalChunks} after ${MAX_ATTEMPTS} attempts.`);
     };
 
-    // Step 3: Concurrency Worker Pool (3 Parallel Upload Streams)
-    const CONCURRENCY = 3;
+    // Step 3: Concurrency Worker Pool (Adaptive 2 streams for huge files to prevent Telegram 429)
+    const CONCURRENCY = totalChunks > 15 ? 2 : 3;
     const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);
     const uploadedChunks: UploadedChunkResult[] = new Array(totalChunks);
 
     const pool = async () => {
       while (chunkIndices.length > 0) {
-        if (this.isPaused) throw new Error("Upload paused by user.");
+        if (this.isPaused) throw new Error("Upload paused or stopped.");
         const nextIndex = chunkIndices.shift();
         if (nextIndex === undefined) break;
         const res = await uploadSingleChunk(nextIndex);

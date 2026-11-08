@@ -31,7 +31,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   RefreshCw,
-  Tv
+  Tv,
+  AlertTriangle
 } from "lucide-react";
 import { AirShareFile } from "../../lib/types";
 import { api } from "../../lib/api";
@@ -824,6 +825,23 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
                     }`}
                   />
                 </div>
+
+                {mediaError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/90 z-40 p-6 text-center">
+                    <AlertTriangle className="w-10 h-10 text-amber-400" />
+                    <p className="text-sm font-semibold text-white">{mediaError}</p>
+                    <p className="text-xs text-slate-400 max-w-sm">
+                      This stream format may require downloading the complete assembled file for local playback.
+                    </p>
+                    <button
+                      onClick={() => api.downloadFile(file)}
+                      className="mt-2 flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow shadow-blue-500/20"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Assembled Video</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Big Center Play/Pause Overlay Indicator */}
                 {!videoPlaying && (

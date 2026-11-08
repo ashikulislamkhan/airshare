@@ -11,7 +11,8 @@ import {
   MoreVertical, 
   Star,
   ArrowUpDown,
-  Music 
+  Music,
+  Eye 
 } from "lucide-react";
 import { AirShareFile, AirShareFolder } from "../../lib/types";
 
@@ -105,7 +106,12 @@ export default function FileList({
               <tr
                 key={folder.id}
                 data-selectable-id={folder.id}
-                onClick={(e) => onItemSelect?.(e, folder, "folder")}
+                onClick={(e) => {
+                  onItemSelect?.(e, folder, "folder");
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    onFolderClick(folder);
+                  }
+                }}
                 onDoubleClick={() => onFolderClick(folder)}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -119,7 +125,7 @@ export default function FileList({
               >
                 <td className="py-2 px-3 flex items-center gap-2.5 truncate max-w-xs sm:max-w-md">
                   <Folder className="w-4 h-4 text-amber-300 fill-amber-300/20 flex-shrink-0" />
-                  <span className="truncate font-medium">{folder.name}</span>
+                  <span className="truncate font-medium hover:underline">{folder.name}</span>
                 </td>
                 <td className="py-2 px-3 text-slate-400 hidden sm:table-cell">Folder</td>
                 <td className="py-2 px-3 text-slate-400 font-mono tabular-nums">—</td>
@@ -148,7 +154,12 @@ export default function FileList({
               <tr
                 key={file.id}
                 data-selectable-id={file.id}
-                onClick={(e) => onItemSelect?.(e, file, "file")}
+                onClick={(e) => {
+                  onItemSelect?.(e, file, "file");
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    onFileClick(file);
+                  }
+                }}
                 onDoubleClick={() => onFileClick(file)}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -160,9 +171,15 @@ export default function FileList({
                     : "hover:bg-white/[0.03] text-slate-200"
                 }`}
               >
-                <td className="py-2 px-3 flex items-center gap-2.5 truncate max-w-xs sm:max-w-md">
+                <td 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFileClick(file);
+                  }}
+                  className="py-2 px-3 flex items-center gap-2.5 truncate max-w-xs sm:max-w-md cursor-pointer"
+                >
                   {getFileIcon(file.fileType || "other", file.extension)}
-                  <span className="truncate font-medium">{file.name}</span>
+                  <span className="truncate font-medium hover:underline hover:text-sky-300 transition-colors">{file.name}</span>
                   {file.isStarred && (
                     <Star className="w-3 h-3 text-amber-300 fill-amber-300 flex-shrink-0 ml-1" />
                   )}
@@ -177,15 +194,27 @@ export default function FileList({
                   {formatDate(file.updatedAt)}
                 </td>
                 <td className="py-2 px-3 text-right">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onContextMenu(e, file, "file");
-                    }}
-                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <MoreVertical className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFileClick(file);
+                      }}
+                      className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/[0.06]"
+                      title="Preview file"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onContextMenu(e, file, "file");
+                      }}
+                      className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/[0.06]"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

@@ -333,6 +333,32 @@ export default function DrivePage() {
     onPaste: handlePasteItems,
   });
 
+  // Keyboard Enter / Space opens selected file (Google Drive standard)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (previewFile) return;
+      if (e.key === "Enter" || e.key === " ") {
+        if (selectedIds.size === 1) {
+          const selectedId = Array.from(selectedIds)[0];
+          const fileToOpen = files.find((f) => f.id === selectedId);
+          if (fileToOpen) {
+            e.preventDefault();
+            setPreviewFile(fileToOpen);
+            return;
+          }
+          const folderToOpen = folders.find((f) => f.id === selectedId);
+          if (folderToOpen && e.key === "Enter") {
+            e.preventDefault();
+            setCurrentFolder(folderToOpen);
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIds, files, folders, previewFile]);
+
   // Context Menu Handler
   const handleContextMenu = (
     e: React.MouseEvent,

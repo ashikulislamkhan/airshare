@@ -49,11 +49,11 @@ function FileThumbnail({
   const ext = (file.extension || (file.name && file.name.includes(".") ? file.name.split(".").pop() : "") || "").toLowerCase();
   const isImage = file.fileType === "image" || ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp", "ico", "avif"].includes(ext);
 
-  if (!isImage || !token || hasError || !file.id) {
+  if (!isImage || hasError) {
     return <div className="flex items-center justify-center w-full h-full">{fallback}</div>;
   }
 
-  const streamUrl = api.getStreamUrl(file.id, token, false);
+  const streamUrl = api.getStreamUrl(file, token, false);
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-slate-950 flex items-center justify-center">
@@ -133,7 +133,12 @@ export default function FileGrid({
                 <div
                   key={folder.id}
                   data-selectable-id={folder.id}
-                  onClick={(e) => onItemSelect?.(e, folder, "folder")}
+                  onClick={(e) => {
+                    onItemSelect?.(e, folder, "folder");
+                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                      onFolderClick(folder);
+                    }
+                  }}
                   onDoubleClick={() => onFolderClick(folder)}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -178,7 +183,12 @@ export default function FileGrid({
                 <div
                   key={file.id}
                   data-selectable-id={file.id}
-                  onClick={(e) => onItemSelect?.(e, file, "file")}
+                  onClick={(e) => {
+                    onItemSelect?.(e, file, "file");
+                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                      onFileClick(file);
+                    }
+                  }}
                   onDoubleClick={() => onFileClick(file)}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -190,8 +200,14 @@ export default function FileGrid({
                       : "bg-slate-900/50 hover:bg-slate-800/60 border-white/[0.06] hover:border-white/[0.12]"
                   }`}
                 >
-                  {/* Thumbnail / Icon Container */}
-                  <div className="h-28 bg-slate-950/60 flex items-center justify-center relative border-b border-white/[0.06] overflow-hidden">
+                  {/* Thumbnail / Icon Container (Click to preview directly) */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFileClick(file);
+                    }}
+                    className="h-28 bg-slate-950/60 flex items-center justify-center relative border-b border-white/[0.06] overflow-hidden"
+                  >
                     <FileThumbnail
                       file={file}
                       token={token}

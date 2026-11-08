@@ -276,52 +276,97 @@ export const api = {
   },
 
   getStreamUrl(fileOrId: AirShareFile | string, token?: string, download: boolean = false): string {
-    let tgId = "";
     if (typeof fileOrId === "object" && fileOrId !== null) {
-      tgId = fileOrId.telegramFileId || fileOrId.chunks?.[0]?.telegramFileId || fileOrId.id;
-    } else {
-      tgId = fileOrId;
+      const file = fileOrId;
+      // Multi-chunk files: stream via unified edge concatenation endpoint
+      if (file.chunks && file.chunks.length > 1) {
+        const sorted = [...file.chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+        const chunkIds = sorted.map((c) => c.telegramFileId).filter(Boolean).join(",");
+        const params = new URLSearchParams({
+          chunks: chunkIds,
+          name: file.name,
+          mime: file.mimeType || "",
+        });
+        if (download) params.set("download", "1");
+        return `${WORKER_URL}/api/stream-file?${params.toString()}`;
+      }
+
+      // Single chunk file
+      const tgId = file.telegramFileId || file.chunks?.[0]?.telegramFileId || file.id;
+      const params = new URLSearchParams({
+        name: file.name,
+        mime: file.mimeType || "",
+      });
+      if (download) params.set("download", "1");
+      return `${WORKER_URL}/api/stream/${tgId}?${params.toString()}`;
     }
-    return `${WORKER_URL}/api/stream/${tgId}`;
+
+    // Direct string ID
+    return `${WORKER_URL}/api/stream/${fileOrId}${download ? "?download=1" : ""}`;
   },
 
   async downloadFile(file: AirShareFile, onProgress?: (percent: number) => void): Promise<void> {
-    if (!file.chunks || file.chunks.length <= 1) {
-      const tgId = file.telegramFileId || file.chunks?.[0]?.telegramFileId || file.id;
-      const url = `${WORKER_URL}/api/stream/${tgId}`;
+    try {
+      // 1. Single chunk file download via Blob (guarantees correct filename across origins)
+      if (!file.chunks || file.chunks.length <= 1) {
+        const tgId = file.telegramFileId || file.chunks?.[0]?.telegramFileId || file.id;
+        const streamUrl = `${WORKER_URL}/api/stream/${tgId}?name=${encodeURIComponent(file.name)}&mime=${encodeURIComponent(file.mimeType || "")}&download=1`;
+        
+        onProgress?.(10);
+        const res = await fetch(streamUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to download file from edge.`);
+        
+        onProgress?.(70);
+        const blob = await res.blob();
+        onProgress?.(100);
+
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+        return;
+      }
+
+      // 2. Multi-chunk file download with sequential progress & reassembly
+      const chunks = [...file.chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+      const chunkBlobs: Blob[] = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const res = await fetch(`${WORKER_URL}/api/stream/${chunk.telegramFileId}?name=${encodeURIComponent(file.name)}`);
+        if (!res.ok) throw new Error(`Failed to download part ${i + 1}/${chunks.length}`);
+        const blob = await res.blob();
+        chunkBlobs.push(blob);
+        if (onProgress) {
+          onProgress(Math.round(((i + 1) / chunks.length) * 100));
+        }
+      }
+
+      const fullBlob = new Blob(chunkBlobs, { type: file.mimeType || "application/octet-stream" });
+      const blobUrl = URL.createObjectURL(fullBlob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = blobUrl;
       a.download = file.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      return;
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+    } catch (err) {
+      console.error("In-browser download error, falling back to direct URL:", err);
+      // Fallback to direct window link
+      const directUrl = this.getStreamUrl(file, undefined, true);
+      const a = document.createElement("a");
+      a.href = directUrl;
+      a.download = file.name;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
-
-    // Multi-chunk parallel/sequential reassembly
-    const chunks = [...file.chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
-    const chunkBlobs: Blob[] = [];
-
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const res = await fetch(`${WORKER_URL}/api/stream/${chunk.telegramFileId}`);
-      if (!res.ok) throw new Error(`Failed to download part ${i + 1}/${chunks.length}`);
-      const blob = await res.blob();
-      chunkBlobs.push(blob);
-      if (onProgress) {
-        onProgress(Math.round(((i + 1) / chunks.length) * 100));
-      }
-    }
-
-    const fullBlob = new Blob(chunkBlobs, { type: file.mimeType || "application/octet-stream" });
-    const blobUrl = URL.createObjectURL(fullBlob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
   },
 
   // ─────────────────────────────────────────────────────────────
