@@ -20,6 +20,9 @@ export const metadata: Metadata = {
     shortcut: "/logo.png",
     apple: "/apple-touch-icon.png",
   },
+  verification: {
+    google: "ZbyOG2gq1udf0XlCt9y9IuxT7FfFA_2yHXnyoWMHguM",
+  },
 };
 
 export const viewport: Viewport = {
@@ -37,6 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <meta name="google-site-verification" content="ZbyOG2gq1udf0XlCt9y9IuxT7FfFA_2yHXnyoWMHguM" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#060b18" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -57,7 +61,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased bg-[#060b18] text-slate-100 h-screen overflow-hidden">
+      <body className="antialiased bg-[#090d16] text-slate-100 h-screen overflow-hidden">
         <PWARegister />
         <AuthProvider>
           <TransferProvider>
