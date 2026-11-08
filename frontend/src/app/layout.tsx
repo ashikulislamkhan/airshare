@@ -44,13 +44,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="google-site-verification" content="ZbyOG2gq1udf0XlCt9y9IuxT7FfFA_2yHXnyoWMHguM" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#060b18" />
+        <link rel="manifest" href={`${basePath}/manifest.json`} />
+        <meta name="theme-color" content="#090d16" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="AirShare" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href={`${basePath}/apple-touch-icon.png`} />
         <script
           dangerouslySetInnerHTML={{
             __html: `

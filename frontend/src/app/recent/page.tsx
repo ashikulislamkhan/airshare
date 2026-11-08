@@ -17,6 +17,8 @@ import { api } from "../../lib/api";
 import { AirShareFile } from "../../lib/types";
 import { getFirebaseIdToken } from "../../lib/firebase";
 import { useDriveSelection } from "../../hooks/useDriveSelection";
+import { usePullToRefresh } from "../../hooks/usePullToRefresh";
+import PullToRefreshIndicator from "../../components/common/PullToRefreshIndicator";
 import { Clock } from "lucide-react";
 
 export default function RecentPage() {
@@ -54,6 +56,16 @@ export default function RecentPage() {
   useEffect(() => {
     fetchRecent();
   }, [fetchRecent]);
+
+  const {
+    containerRef: pullContainerRef,
+    pullDistance,
+    isRefreshing: isPullRefreshing,
+    isReady: isPullReady,
+  } = usePullToRefresh({
+    onRefresh: fetchRecent,
+  });
+
 
   // Filter files by search
   const filteredFiles = files.filter((f) =>
@@ -128,7 +140,15 @@ export default function RecentPage() {
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 pb-24 md:pb-6">
+        <main
+          ref={pullContainerRef as any}
+          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 pb-24 md:pb-6"
+        >
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            isRefreshing={isPullRefreshing}
+            isReady={isPullReady}
+          />
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
             <div className="flex items-center gap-2.5">
               <Clock className="w-5 h-5 text-cyan-400" />

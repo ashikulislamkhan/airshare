@@ -62,7 +62,7 @@ export function usePWAInstall() {
     };
   }, []);
 
-  const installApp = useCallback(async () => {
+  const installApp = useCallback(async (): Promise<boolean> => {
     // @ts-ignore
     const promptEvent: BeforeInstallPromptEvent | null =
       deferredPrompt || (typeof window !== "undefined" ? (window as any).__AIRSHARE_INSTALL_PROMPT__ : null);
@@ -74,15 +74,17 @@ export function usePWAInstall() {
         if (choice && choice.outcome === "accepted") {
           setIsInstalled(true);
         }
+        // @ts-ignore
+        if (typeof window !== "undefined") {
+          (window as any).__AIRSHARE_INSTALL_PROMPT__ = null;
+        }
+        setDeferredPrompt(null);
+        return true;
       } catch (err) {
         console.warn("Direct install prompt trigger:", err);
       }
-      // @ts-ignore
-      if (typeof window !== "undefined") {
-        (window as any).__AIRSHARE_INSTALL_PROMPT__ = null;
-      }
-      setDeferredPrompt(null);
     }
+    return false;
   }, [deferredPrompt]);
 
   return {
