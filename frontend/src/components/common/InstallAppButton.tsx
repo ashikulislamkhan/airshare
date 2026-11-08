@@ -12,12 +12,11 @@ interface InstallAppButtonProps {
 export default function InstallAppButton({ className = "", variant = "header" }: InstallAppButtonProps) {
   const { installApp, isInstalled } = usePWAInstall();
 
-  // If already running inside standalone app mode, show subtle checkmark
   if (isInstalled) {
     return (
-      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium select-none ${className}`}>
+      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium select-none ${className}`}>
         <Check className="w-3.5 h-3.5" />
-        <span>App Installed</span>
+        <span>Installed</span>
       </div>
     );
   }
@@ -25,14 +24,14 @@ export default function InstallAppButton({ className = "", variant = "header" }:
   return (
     <button
       onClick={installApp}
-      className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition duration-200 active:scale-95 select-none cursor-pointer ${
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors select-none cursor-pointer border border-white/[0.08] ${
         variant === "card"
-          ? "bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-lg shadow-cyan-500/25 border border-white/20"
-          : "bg-slate-900/90 hover:bg-slate-800/95 text-cyan-300 hover:text-white border border-cyan-400/35 hover:border-cyan-400/60 shadow-lg shadow-cyan-500/15 backdrop-blur-xl"
+          ? "bg-slate-100 hover:bg-white text-slate-950 border-slate-200"
+          : "bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white"
       } ${className}`}
-      title="Install AirShare App on your device"
+      title="Install AirShare on your device"
     >
-      <Download className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+      <Download className="w-3.5 h-3.5 text-slate-400" />
       <span>Install App</span>
     </button>
   );

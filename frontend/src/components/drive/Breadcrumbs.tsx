@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import { ChevronRight, HardDrive, Folder } from "lucide-react";
 import { AirShareFolder } from "../../lib/types";
 
@@ -12,20 +11,20 @@ interface BreadcrumbsProps {
 
 export default function Breadcrumbs({ currentFolder, onNavigateHome }: BreadcrumbsProps) {
   return (
-    <nav className="flex items-center gap-1.5 text-xs text-slate-400 py-2 select-none">
+    <nav className="flex items-center gap-1.5 text-xs text-slate-400 py-1 select-none">
       <button
         onClick={onNavigateHome}
-        className="flex items-center gap-1.5 hover:text-white transition font-medium"
+        className="flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors font-medium"
       >
-        <HardDrive className="w-4 h-4 text-blue-400" />
+        <HardDrive className="w-3.5 h-3.5 text-slate-400" />
         <span>My Drive</span>
       </button>
 
       {currentFolder && (
         <>
           <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-          <div className="flex items-center gap-1 text-slate-200 font-semibold truncate max-w-xs">
-            <Folder className="w-4 h-4 text-amber-400 fill-amber-400/20 flex-shrink-0" />
+          <div className="flex items-center gap-1.5 text-slate-200 font-medium truncate max-w-xs">
+            <Folder className="w-3.5 h-3.5 text-amber-300 fill-amber-300/20 flex-shrink-0" />
             <span className="truncate">{currentFolder.name}</span>
           </div>
         </>

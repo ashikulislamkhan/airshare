@@ -44,11 +44,11 @@ export default function ContextMenu({
     <div
       onClick={(e) => e.stopPropagation()}
       style={{ top: y, left: x }}
-      className="fixed bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-1.5 w-56 z-50 text-xs text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100"
+      className="fixed bg-slate-900 border border-white/[0.08] rounded-xl shadow-xl py-1 w-52 z-50 text-xs text-slate-200 select-none animate-in fade-in zoom-in-95 duration-100"
     >
       {/* Header if multi-selected */}
       {isMulti && (
-        <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 border-b border-slate-700/60 mb-1">
+        <div className="px-3 py-1.5 text-[11px] font-mono tabular-nums text-slate-400 border-b border-white/[0.06] mb-0.5">
           {selectedCount} items selected
         </div>
       )}
@@ -56,54 +56,52 @@ export default function ContextMenu({
       {!isMulti && targetType === "file" && onPreview && (
         <button
           onClick={() => { onPreview(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-700/70 transition"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/[0.06] transition-colors text-left"
         >
-          <Eye className="w-4 h-4 text-blue-400" />
-          Preview
+          <Eye className="w-3.5 h-3.5 text-slate-400" />
+          <span>Preview</span>
         </button>
       )}
 
       {onDownload && (
         <button
           onClick={() => { onDownload(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-700/70 transition"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/[0.06] transition-colors text-left"
         >
-          <Download className="w-4 h-4 text-emerald-400" />
-          {isMulti ? `Download (${selectedCount} items)` : "Download"}
+          <Download className="w-3.5 h-3.5 text-slate-400" />
+          <span>{isMulti ? `Download (${selectedCount} items)` : "Download"}</span>
         </button>
       )}
 
       {!isMulti && onShare && (
         <button
           onClick={() => { onShare(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-700/70 transition"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/[0.06] transition-colors text-left"
         >
-          <Share2 className="w-4 h-4 text-indigo-400" />
-          Share
+          <Share2 className="w-3.5 h-3.5 text-slate-400" />
+          <span>Share</span>
         </button>
       )}
 
-      {onStar && (
+      {!isMulti && targetType === "file" && onStar && (
         <button
           onClick={() => { onStar(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-700/70 transition"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-white/[0.06] transition-colors text-left"
         >
-          <Star className={`w-4 h-4 ${target?.isStarred ? "text-amber-400 fill-amber-400" : "text-slate-400"}`} />
-          {isMulti
-            ? `Add to Starred (${selectedCount})`
-            : target?.isStarred ? "Remove from Starred" : "Add to Starred"}
+          <Star className={`w-3.5 h-3.5 ${(target as AirShareFile)?.isStarred ? "text-amber-300 fill-amber-300" : "text-slate-400"}`} />
+          <span>{(target as AirShareFile)?.isStarred ? "Unstar" : "Add to Starred"}</span>
         </button>
       )}
 
-      <div className="h-px bg-slate-700 my-1" />
+      <div className="h-px bg-white/[0.06] my-1" />
 
       {onTrash && (
         <button
           onClick={() => { onTrash(); onClose(); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-red-400 hover:bg-red-500/10 transition"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 hover:bg-rose-500/10 text-rose-300 hover:text-rose-200 transition-colors text-left"
         >
-          <Trash2 className="w-4 h-4" />
-          {isMulti ? `Move to Trash (${selectedCount} items)` : "Move to Trash"}
+          <Trash2 className="w-3.5 h-3.5" />
+          <span>Move to Trash</span>
         </button>
       )}
     </div>

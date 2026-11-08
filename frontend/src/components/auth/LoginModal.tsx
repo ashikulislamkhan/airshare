@@ -8,32 +8,28 @@ export default function LoginModal() {
   const { signIn, loading } = useAuth();
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 z-50 select-none">
-      {/* Background ambient gradient glow */}
-      <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-20 -left-20 pointer-events-none" />
-      <div className="absolute w-96 h-96 bg-blue-600/15 rounded-full blur-3xl -bottom-20 -right-20 pointer-events-none" />
-
-      <div className="relative w-full max-w-md bg-slate-900/60 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] text-center space-y-6">
-        {/* Brand Icon (3D Origami Airplane Logo) */}
-        <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden shadow-2xl shadow-cyan-500/30 border border-white/20 bg-slate-900 p-1">
-          <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-xl" />
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 select-none">
+      <div className="relative w-full max-w-sm bg-slate-900/90 border border-white/[0.08] rounded-2xl p-7 shadow-2xl text-center space-y-6">
+        {/* Brand Icon */}
+        <div className="w-16 h-16 mx-auto rounded-xl overflow-hidden border border-white/10 bg-slate-950 p-1">
+          <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-lg" />
         </div>
 
         {/* Title */}
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white tracking-tight">AirShare</h1>
-          <p className="text-sm text-cyan-400 font-semibold tracking-wide">#ShareOnAir</p>
+          <h1 className="text-xl font-semibold text-slate-100 tracking-tight">AirShare</h1>
+          <p className="text-xs text-sky-400 font-medium tracking-wide">#ShareOnAir</p>
         </div>
 
-        {/* Google Sign-In Button (iOS Liquid Glass) */}
-        <div className="pt-2">
+        {/* Google Sign-In Button */}
+        <div className="pt-1">
           <button
             onClick={signIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-semibold py-3 px-4 rounded-2xl shadow-lg transition duration-200 disabled:opacity-60 active:scale-98 cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-100 text-slate-900 font-medium text-sm py-2.5 px-4 rounded-xl border border-slate-200 transition-colors disabled:opacity-50 cursor-pointer"
           >
             {/* Google G SVG */}
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

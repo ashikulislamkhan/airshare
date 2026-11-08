@@ -110,7 +110,7 @@ export default function RecentPage() {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      className="flex h-screen w-screen bg-[#060b18] overflow-hidden relative select-none"
+      className="flex h-screen w-screen bg-[#090d16] overflow-hidden relative select-none"
     >
       <SelectionBox selectionBox={selectionBox} />
 
@@ -132,10 +132,10 @@ export default function RecentPage() {
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
             <div className="flex items-center gap-2.5">
               <Clock className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-white font-semibold text-lg">Recent Files</h2>
+              <h2 className="text-slate-100 font-medium text-base">Recent files</h2>
             </div>
             {selectedIds.size > 0 && (
-              <span className="text-xs font-semibold text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30">
+              <span className="text-xs font-medium text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-md border border-sky-500/20 font-mono tabular-nums">
                 {selectedIds.size} item{selectedIds.size > 1 ? "s" : ""} selected
               </span>
             )}

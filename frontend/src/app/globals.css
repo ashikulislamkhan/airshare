@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #060b18;
-  --foreground: #f8fafc;
+  --background: #090d16;
+  --foreground: #f1f5f9;
 }
 
 html, body {
@@ -17,53 +17,41 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbars */
+/* Custom scrollbars - quiet neutral */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(6, 11, 24, 0.4);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.2);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.4);
+  background: rgba(255, 255, 255, 0.24);
 }
 
-/* iOS Semi-Transparent Liquid Glass Effects */
-.liquid-glass {
-  background: rgba(10, 17, 34, 0.55);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
-
-.liquid-glass-card {
-  background: rgba(13, 22, 42, 0.45);
+/* Quiet neutral surfaces & hairlines */
+.quiet-surface {
+  background: rgba(14, 20, 32, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.liquid-glass-card:hover {
-  background: rgba(22, 36, 68, 0.6);
-  border-color: rgba(56, 189, 248, 0.4);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px -4px rgba(0, 163, 255, 0.2);
-}
-
-.liquid-pill {
-  background: rgba(255, 255, 255, 0.05);
+.quiet-card {
+  background: rgba(16, 24, 39, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.quiet-card:hover {
+  background: rgba(23, 34, 54, 0.75);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .pb-safe {

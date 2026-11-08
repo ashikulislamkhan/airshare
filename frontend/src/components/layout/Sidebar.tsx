@@ -40,7 +40,7 @@ export default function Sidebar({
   const folderInputRef = useRef<HTMLInputElement>(null);
   const newMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close "+ New" dropdown on click outside
+  // Close "New" dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
@@ -79,18 +79,18 @@ export default function Sidebar({
   };
 
   const sidebarContent = (
-    <div className="flex flex-col h-full text-slate-300 select-none">
+    <div className="flex flex-col h-full text-slate-300 select-none bg-[#090d16]">
       {/* Brand Header */}
-      <div className="p-5 flex items-center justify-between border-b border-white/[0.08]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-cyan-500/20 border border-white/10 flex-shrink-0 bg-slate-900">
-            <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover" />
+      <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.08]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-slate-900 p-0.5">
+            <img src="/logo.png" alt="AirShare" className="w-full h-full object-cover rounded-md" />
           </div>
           <div>
-            <h1 className="font-bold text-base text-white tracking-tight flex items-center gap-1.5">
+            <h1 className="font-medium text-sm text-slate-100 tracking-tight leading-none">
               AirShare
             </h1>
-            <p className="text-[10px] text-cyan-400 font-mono font-medium">Cloud Storage</p>
+            <p className="text-[11px] text-slate-400 font-normal leading-tight mt-0.5">Cloud storage</p>
           </div>
         </div>
 
@@ -98,58 +98,58 @@ export default function Sidebar({
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}
-            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition"
+            className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-white/[0.06] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* New Action Dropdown / Button (Liquid Glass, Click only - NOT ON HOVER) */}
-      <div className="p-4" ref={newMenuRef}>
+      {/* New Action Dropdown / Button (Click only) */}
+      <div className="p-3" ref={newMenuRef}>
         <div className="relative">
           <button
             onClick={() => setIsNewMenuOpen(!isNewMenuOpen)}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold py-3 px-4 rounded-2xl shadow-lg shadow-cyan-500/25 border border-white/20 active:scale-95 transition duration-200"
+            className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-white text-slate-950 font-medium text-xs py-2 px-3 rounded-lg border border-slate-200 transition-colors shadow-sm"
           >
-            <Plus className="w-5 h-5 stroke-[2.5]" />
+            <Plus className="w-4 h-4 stroke-[2]" />
             <span>New</span>
           </button>
 
-          {/* Action Menu (Shows ONLY when isNewMenuOpen is true) */}
+          {/* Action Menu (Shows ONLY when clicked) */}
           {isNewMenuOpen && (
-            <div className="absolute top-full left-0 w-full mt-2 bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute top-full left-0 w-full mt-1.5 bg-slate-900/95 backdrop-blur-md border border-white/[0.08] rounded-xl shadow-xl p-1 z-50">
               <button
                 onClick={() => {
                   setIsNewMenuOpen(false);
                   fileInputRef.current?.click();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/[0.06] hover:text-white rounded-md transition-colors"
               >
-                <Upload className="w-4 h-4 text-cyan-400" />
-                Files Upload
+                <Upload className="w-3.5 h-3.5 text-slate-400" />
+                <span>Files Upload</span>
               </button>
               <button
                 onClick={() => {
                   setIsNewMenuOpen(false);
                   folderInputRef.current?.click();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/[0.06] hover:text-white rounded-md transition-colors"
               >
-                <Upload className="w-4 h-4 text-blue-400" />
-                Folder Upload
+                <Upload className="w-3.5 h-3.5 text-slate-400" />
+                <span>Folder Upload</span>
               </button>
-              <div className="h-px bg-white/10 my-1" />
+              <div className="h-px bg-white/[0.06] my-1" />
               <button
                 onClick={() => {
                   setIsNewMenuOpen(false);
                   onCreateFolder?.();
                   onCloseMobile?.();
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-200 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl transition"
+                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs text-slate-200 hover:bg-white/[0.06] hover:text-white rounded-md transition-colors"
               >
-                <FolderPlus className="w-4 h-4 text-emerald-400" />
-                Create Folder
+                <FolderPlus className="w-3.5 h-3.5 text-slate-400" />
+                <span>Create Folder</span>
               </button>
             </div>
           )}
@@ -175,8 +175,8 @@ export default function Sidebar({
         />
       </div>
 
-      {/* Navigation Links (Liquid Glass Aesthetic) */}
-      <nav className="flex-1 px-3 space-y-1.5 overflow-y-auto">
+      {/* Navigation Links */}
+      <nav className="flex-1 px-2.5 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href === "/drive" && pathname.startsWith("/drive"));
@@ -185,35 +185,35 @@ export default function Sidebar({
               key={item.href}
               href={item.href}
               onClick={onCloseMobile}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                 isActive
-                  ? "bg-gradient-to-r from-cyan-500/20 to-blue-600/10 text-cyan-300 border border-cyan-400/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] font-semibold"
-                  : "text-slate-400 hover:bg-white/[0.05] hover:text-slate-200 border border-transparent"
+                  ? "bg-white/[0.08] text-slate-100 border border-white/[0.08]"
+                  : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 border border-transparent"
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-cyan-400" : "text-slate-400"}`} />
-              {item.label}
+              <Icon className={`w-4 h-4 ${isActive ? "text-sky-400" : "text-slate-400"}`} />
+              <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* PWA Install App Button */}
-      <div className="px-4 py-2 border-t border-white/[0.05]">
+      <div className="px-3 py-2 border-t border-white/[0.06]">
         <InstallAppButton className="w-full justify-center" />
       </div>
 
-      {/* Storage Indicator (Frosted Liquid Glass Card) */}
-      <div className="p-4 border-t border-white/[0.08]">
-        <div className="bg-slate-900/40 backdrop-blur-xl rounded-2xl p-3.5 border border-white/[0.08] shadow-[0_8px_32px_0_rgba(0,0,0,0.25)]">
-          <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-2">
-            <span>Storage Used</span>
-            <span className="text-white font-semibold">{formatBytes(usedBytes)}</span>
+      {/* Storage Indicator */}
+      <div className="p-3 border-t border-white/[0.08]">
+        <div className="bg-slate-900/60 rounded-xl p-3 border border-white/[0.06]">
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+            <span>Storage used</span>
+            <span className="text-slate-200 font-mono text-[11px] tabular-nums">{formatBytes(usedBytes)}</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 w-1/3 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
+          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-sky-500 w-1/4 rounded-full" />
           </div>
-          <p className="text-[11px] text-slate-400 mt-2">Unlimited Telegram MTProto backend</p>
+          <p className="text-[10px] text-slate-500 mt-1.5">Unlimited Telegram backend</p>
         </div>
       </div>
     </div>
@@ -221,21 +221,19 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop Sidebar (hidden on mobile) */}
-      <aside className="hidden md:flex md:w-64 bg-slate-950/60 backdrop-blur-2xl border-r border-white/[0.08] flex-col h-screen text-slate-300 select-none flex-shrink-0 z-20">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex md:w-60 bg-[#090d16] border-r border-white/[0.08] flex-col h-screen select-none flex-shrink-0 z-20">
         {sidebarContent}
       </aside>
 
-      {/* Mobile Drawer (visible only when isMobileOpen is true) */}
+      {/* Mobile Drawer */}
       {isMobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop overlay */}
           <div
             onClick={onCloseMobile}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
           />
-          {/* Slide-out drawer */}
-          <div className="relative w-72 max-w-[80vw] bg-slate-950/95 backdrop-blur-2xl border-r border-white/10 shadow-2xl h-full flex flex-col z-10 animate-in slide-in-from-left duration-200">
+          <div className="relative w-64 max-w-[80vw] bg-[#090d16] border-r border-white/10 shadow-2xl h-full flex flex-col z-10">
             {sidebarContent}
           </div>
         </div>

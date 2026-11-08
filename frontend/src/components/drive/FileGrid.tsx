@@ -68,12 +68,12 @@ function FileThumbnail({
         loading="lazy"
         onLoad={() => setLoaded(true)}
         onError={() => setHasError(true)}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
+        className={`w-full h-full object-cover transition-opacity duration-200 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
       />
       {loaded && (
-        <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
       )}
     </div>
   );
@@ -100,24 +100,21 @@ export default function FileGrid({
   const getFileIcon = (type: string, ext: string = "") => {
     const e = ext.toLowerCase();
     if (type === "audio" || ["mp3", "wav", "flac", "ogg", "m4a", "aac"].includes(e)) {
-      return <Music className="w-8 h-8 text-amber-400" />;
+      return <Music className="w-6 h-6 text-slate-400" />;
     }
     if (type === "code" || ["json", "html", "htm", "bat", "cmd", "py", "js", "ts", "tsx", "jsx", "css"].includes(e)) {
-      return <FileCode className="w-8 h-8 text-cyan-400" />;
+      return <FileCode className="w-6 h-6 text-slate-400" />;
     }
     switch (type) {
       case "image":
-        return <ImageIcon className="w-8 h-8 text-emerald-400" />;
+        return <ImageIcon className="w-6 h-6 text-slate-400" />;
       case "video":
-        return <Video className="w-8 h-8 text-purple-400" />;
+        return <Video className="w-6 h-6 text-slate-400" />;
       case "pdf":
-        return <FileText className="w-8 h-8 text-rose-400" />;
       case "office":
-        return <FileText className="w-8 h-8 text-blue-400" />;
-      case "text":
-        return <FileCode className="w-8 h-8 text-amber-400" />;
+        return <FileText className="w-6 h-6 text-slate-400" />;
       default:
-        return <FileArchive className="w-8 h-8 text-slate-400" />;
+        return <FileArchive className="w-6 h-6 text-slate-400" />;
     }
   };
 
@@ -126,10 +123,10 @@ export default function FileGrid({
       {/* Folders Section */}
       {folders.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-medium text-slate-400 mb-2.5">
             Folders ({folders.length})
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {folders.map((folder) => {
               const isSelected = selectedIds.has(folder.id);
               return (
@@ -142,13 +139,13 @@ export default function FileGrid({
                     e.preventDefault();
                     onContextMenu(e, folder, "folder");
                   }}
-                  className={`group relative border rounded-xl p-3 flex items-center gap-3 cursor-pointer transition shadow-sm hover:shadow-md ${
+                  className={`group relative border rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer transition-colors ${
                     isSelected
-                      ? "bg-blue-600/30 border-blue-500 ring-2 ring-blue-500/50"
-                      : "bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50"
+                      ? "bg-sky-500/10 border-sky-500/40 ring-1 ring-sky-500/30 text-sky-200"
+                      : "bg-slate-900/50 hover:bg-slate-800/60 border-white/[0.06] hover:border-white/[0.12]"
                   }`}
                 >
-                  <Folder className="w-5 h-5 text-amber-400 fill-amber-400/20 flex-shrink-0" />
+                  <Folder className="w-4 h-4 text-amber-300 fill-amber-300/20 flex-shrink-0" />
                   <span className="text-xs font-medium text-slate-200 truncate flex-1" title={folder.name}>
                     {folder.name}
                   </span>
@@ -157,7 +154,7 @@ export default function FileGrid({
                       e.stopPropagation();
                       onContextMenu(e, folder, "folder");
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white rounded transition"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white rounded transition-opacity"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
@@ -171,10 +168,10 @@ export default function FileGrid({
       {/* Files Section */}
       {files.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-medium text-slate-400 mb-2.5">
             Files ({files.length})
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {files.map((file) => {
               const isSelected = selectedIds.has(file.id);
               return (
@@ -187,57 +184,52 @@ export default function FileGrid({
                     e.preventDefault();
                     onContextMenu(e, file, "file");
                   }}
-                  className={`group relative border rounded-2xl overflow-hidden cursor-pointer transition shadow-sm hover:shadow-lg flex flex-col ${
+                  className={`group relative border rounded-xl overflow-hidden cursor-pointer transition-colors flex flex-col ${
                     isSelected
-                      ? "bg-cyan-500/20 border-cyan-400 ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(0,163,255,0.25)]"
-                      : "bg-slate-900/40 backdrop-blur-xl border-white/[0.08] hover:border-cyan-400/40 hover:bg-slate-850/60"
+                      ? "bg-sky-500/10 border-sky-500/40 ring-1 ring-sky-500/30"
+                      : "bg-slate-900/50 hover:bg-slate-800/60 border-white/[0.06] hover:border-white/[0.12]"
                   }`}
                 >
                   {/* Thumbnail / Icon Container */}
-                  <div className="h-32 bg-slate-900/50 flex items-center justify-center relative border-b border-slate-700/40 overflow-hidden">
+                  <div className="h-28 bg-slate-950/60 flex items-center justify-center relative border-b border-white/[0.06] overflow-hidden">
                     <FileThumbnail
                       file={file}
                       token={token}
-                      fallback={getFileIcon(file.fileType, file.extension)}
+                      fallback={getFileIcon(file.fileType || "other", file.extension)}
                     />
 
                     {file.isStarred && (
-                      <Star className="w-4 h-4 text-amber-400 fill-amber-400 absolute top-2 left-2" />
+                      <div className="absolute top-2 right-2 p-1 rounded-md bg-slate-900/80 backdrop-blur-sm border border-white/10">
+                        <Star className="w-3 h-3 text-amber-300 fill-amber-300" />
+                      </div>
                     )}
+                  </div>
+
+                  {/* Info Footer */}
+                  <div className="p-2.5 flex items-center justify-between gap-1.5">
+                    <div className="truncate flex-1">
+                      <p className="text-xs font-medium text-slate-200 truncate leading-snug" title={file.name}>
+                        {file.name}
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-mono tabular-nums leading-none mt-1">
+                        {formatBytes(file.totalSizeBytes)}
+                      </p>
+                    </div>
 
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onContextMenu(e, file, "file");
                       }}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-white rounded transition-opacity"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-
-                  {/* File Details */}
-                  <div className="p-3">
-                    <p className="text-xs font-medium text-slate-200 truncate" title={file.name}>
-                      {file.name}
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
-                      <span className="uppercase font-mono">{file.extension || "FILE"}</span>
-                      <span>{formatBytes(file.totalSizeBytes)}</span>
-                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
-
-      {folders.length === 0 && files.length === 0 && (
-        <div className="py-20 text-center text-slate-500 space-y-2">
-          <Folder className="w-12 h-12 mx-auto stroke-1 text-slate-600" />
-          <p className="text-sm">This folder is empty</p>
-          <p className="text-xs text-slate-600">Drag and drop files here to upload to Telegram MTProto</p>
         </div>
       )}
     </div>

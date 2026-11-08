@@ -29,42 +29,42 @@ export default function NewFolderModal({ isOpen, onClose, onCreate }: NewFolderM
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-sm p-5 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none">
+      <div className="bg-slate-900 border border-white/[0.08] rounded-xl w-full max-w-sm p-4 shadow-2xl space-y-3.5">
+        <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
-            <FolderPlus className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-white font-semibold text-sm">New Folder</h3>
+            <FolderPlus className="w-4 h-4 text-slate-400" />
+            <h3 className="text-slate-100 font-medium text-xs">New folder</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded transition-colors">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           <input
             type="text"
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Untitled folder"
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+            placeholder="Folder name"
+            className="w-full bg-slate-950 border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-white/20 transition-colors"
           />
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg transition"
+              className="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.04] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className="px-4 py-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition shadow-md disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-white text-slate-950 rounded-lg disabled:opacity-50 transition-colors"
             >
-              {loading ? "Creating..." : "Create"}
+              {loading ? "Creating..." : "Create folder"}
             </button>
           </div>
         </form>

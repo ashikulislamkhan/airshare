@@ -59,47 +59,47 @@ export default function ShareDialog({ target, targetType, onClose }: ShareDialog
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 select-none">
+      <div className="bg-slate-900 border border-white/[0.08] rounded-xl w-full max-w-sm p-4 shadow-2xl space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-white font-semibold text-base">Share & Permissions</h2>
+            <Shield className="w-4 h-4 text-slate-400" />
+            <h2 className="text-slate-100 font-medium text-xs">Share & permissions</h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded transition-colors">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Target name */}
         <p className="text-xs text-slate-400 truncate">
-          Configuring access for <span className="text-slate-200 font-medium">"{target.name}"</span>
+          Configuring <span className="text-slate-200 font-medium">"{target.name}"</span>
         </p>
 
         {/* Share with people */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-slate-300">Invite Collaborators</label>
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-slate-400">Invite collaborators</label>
           <input
             type="email"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
             onKeyDown={handleAddEmail}
-            placeholder="Type user email and press Enter..."
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
+            placeholder="Type email and press Enter"
+            className="w-full bg-slate-950 border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-white/20 transition-colors"
           />
 
           {emails.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1 pt-1">
               {emails.map((email) => (
                 <span
                   key={email}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300"
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-800 border border-white/[0.06] rounded text-[11px] text-slate-300"
                 >
                   {email}
                   <button
                     onClick={() => setEmails(emails.filter((e) => e !== email))}
-                    className="hover:text-red-400"
+                    className="hover:text-rose-400"
                   >
                     ×
                   </button>
@@ -110,13 +110,13 @@ export default function ShareDialog({ target, targetType, onClose }: ShareDialog
         </div>
 
         {/* Role & Download Controls */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs font-medium text-slate-300 block mb-1.5">Role Permission</label>
+            <label className="text-[11px] font-medium text-slate-400 block mb-1">Role</label>
             <select
               value={accessLevel}
               onChange={(e) => setAccessLevel(e.target.value as any)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"
+              className="w-full bg-slate-950 border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-white/20 transition-colors"
             >
               <option value="viewer">Viewer</option>
               <option value="commenter">Commenter</option>
@@ -125,14 +125,14 @@ export default function ShareDialog({ target, targetType, onClose }: ShareDialog
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-300 block mb-1.5">Download Rights</label>
+            <label className="text-[11px] font-medium text-slate-400 block mb-1">Downloads</label>
             <button
               type="button"
               onClick={() => setAllowDownload(!allowDownload)}
-              className={`w-full py-2 px-3 rounded-xl border text-xs font-medium transition flex items-center justify-center gap-2 ${
+              className={`w-full py-1.5 px-2.5 rounded-lg border text-xs font-medium transition-colors ${
                 allowDownload
-                  ? "bg-indigo-600/20 border-indigo-500/40 text-indigo-300"
-                  : "bg-slate-800 border-slate-700 text-slate-400"
+                  ? "bg-white/[0.08] border-white/20 text-white"
+                  : "bg-slate-950 border-white/[0.08] text-slate-400"
               }`}
             >
               {allowDownload ? "Allowed" : "Restricted"}
@@ -141,17 +141,17 @@ export default function ShareDialog({ target, targetType, onClose }: ShareDialog
         </div>
 
         {/* Public Link Toggle */}
-        <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="p-2.5 bg-slate-950 border border-white/[0.06] rounded-lg space-y-2">
+          <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              {isPublic ? <Globe className="w-4 h-4 text-emerald-400" /> : <Lock className="w-4 h-4 text-slate-400" />}
-              <span className="text-xs font-medium text-slate-200">
-                {isPublic ? "Anyone with the link can view" : "Restricted link"}
+              {isPublic ? <Globe className="w-3.5 h-3.5 text-emerald-400" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
+              <span className="text-slate-300">
+                {isPublic ? "Public link" : "Restricted link"}
               </span>
             </div>
             <button
               onClick={() => setIsPublic(!isPublic)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition"
+              className="text-sky-400 hover:text-sky-300 font-medium transition-colors"
             >
               {isPublic ? "Disable" : "Enable"}
             </button>
@@ -159,25 +159,25 @@ export default function ShareDialog({ target, targetType, onClose }: ShareDialog
 
           <button
             onClick={handleCopyLink}
-            className="w-full flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-2 rounded-lg transition"
+            className="w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-medium py-1.5 rounded border border-white/[0.08] transition-colors"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-            {copied ? "Link Copied!" : "Copy Share Link"}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copied ? "Link copied" : "Copy share link"}</span>
           </button>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 pt-1">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs text-slate-400 hover:text-white rounded-lg transition"
+            className="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.04] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSaveShare}
             disabled={saving}
-            className="px-5 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-md transition disabled:opacity-50"
+            className="px-3.5 py-1.5 text-xs font-medium bg-slate-100 hover:bg-white text-slate-950 rounded-lg transition-colors disabled:opacity-50"
           >
             {saving ? "Saving..." : "Done"}
           </button>

@@ -14,7 +14,6 @@ import {
   Music 
 } from "lucide-react";
 import { AirShareFile, AirShareFolder } from "../../lib/types";
-import { api } from "../../lib/api";
 
 interface FileListProps {
   folders: AirShareFolder[];
@@ -68,22 +67,19 @@ export default function FileList({
   const getFileIcon = (type: string, ext: string = "") => {
     const e = ext.toLowerCase();
     if (type === "audio" || ["mp3", "wav", "flac", "ogg", "m4a", "aac"].includes(e)) {
-      return <Music className="w-4 h-4 text-amber-400" />;
+      return <Music className="w-4 h-4 text-slate-400" />;
     }
     if (type === "code" || ["json", "html", "htm", "bat", "cmd", "py", "js", "ts", "tsx", "jsx", "css"].includes(e)) {
-      return <FileCode className="w-4 h-4 text-cyan-400" />;
+      return <FileCode className="w-4 h-4 text-slate-400" />;
     }
     switch (type) {
       case "image":
-        return <ImageIcon className="w-4 h-4 text-emerald-400" />;
+        return <ImageIcon className="w-4 h-4 text-slate-400" />;
       case "video":
-        return <Video className="w-4 h-4 text-purple-400" />;
+        return <Video className="w-4 h-4 text-slate-400" />;
       case "pdf":
-        return <FileText className="w-4 h-4 text-rose-400" />;
       case "office":
-        return <FileText className="w-4 h-4 text-blue-400" />;
-      case "text":
-        return <FileCode className="w-4 h-4 text-amber-400" />;
+        return <FileText className="w-4 h-4 text-slate-400" />;
       default:
         return <FileArchive className="w-4 h-4 text-slate-400" />;
     }
@@ -93,15 +89,15 @@ export default function FileList({
     <div className="w-full overflow-x-auto select-none">
       <table className="w-full text-left text-xs border-collapse">
         <thead>
-          <tr className="border-b border-slate-800 text-slate-400 font-semibold">
-            <th className="py-2.5 px-3">Name</th>
-            <th className="py-2.5 px-3 hidden sm:table-cell">Type</th>
-            <th className="py-2.5 px-3">Size</th>
-            <th className="py-2.5 px-3 hidden sm:table-cell">Last Modified</th>
-            <th className="py-2.5 px-3 text-right">Actions</th>
+          <tr className="border-b border-white/[0.08] text-slate-400 font-medium">
+            <th className="py-2 px-3">Name</th>
+            <th className="py-2 px-3 hidden sm:table-cell">Type</th>
+            <th className="py-2 px-3">Size</th>
+            <th className="py-2 px-3 hidden sm:table-cell">Last modified</th>
+            <th className="py-2 px-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/40">
+        <tbody className="divide-y divide-white/[0.04]">
           {/* Folders */}
           {folders.map((folder) => {
             const isSelected = selectedIds.has(folder.id);
@@ -115,24 +111,28 @@ export default function FileList({
                   e.preventDefault();
                   onContextMenu(e, folder, "folder");
                 }}
-                className={`cursor-pointer transition group border-b border-slate-800/20 ${
-                  isSelected ? "bg-blue-600/30 font-semibold" : "hover:bg-slate-800/50"
+                className={`group cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-sky-500/10 text-sky-200"
+                    : "hover:bg-white/[0.03] text-slate-200"
                 }`}
               >
-                <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
-                  <Folder className="w-4 h-4 text-amber-400 fill-amber-400/20 flex-shrink-0" />
-                  <span className="truncate max-w-sm">{folder.name}</span>
+                <td className="py-2 px-3 flex items-center gap-2.5 truncate max-w-xs sm:max-w-md">
+                  <Folder className="w-4 h-4 text-amber-300 fill-amber-300/20 flex-shrink-0" />
+                  <span className="truncate font-medium">{folder.name}</span>
                 </td>
-                <td className="py-2.5 px-3 text-slate-400 hidden sm:table-cell">Folder</td>
-                <td className="py-2.5 px-3 text-slate-400">—</td>
-                <td className="py-2.5 px-3 text-slate-400 hidden sm:table-cell">{formatDate(folder.updatedAt)}</td>
-                <td className="py-2.5 px-3 text-right">
+                <td className="py-2 px-3 text-slate-400 hidden sm:table-cell">Folder</td>
+                <td className="py-2 px-3 text-slate-400 font-mono tabular-nums">—</td>
+                <td className="py-2 px-3 text-slate-400 font-mono tabular-nums hidden sm:table-cell">
+                  {formatDate(folder.updatedAt)}
+                </td>
+                <td className="py-2 px-3 text-right">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onContextMenu(e, folder, "folder");
                     }}
-                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition"
+                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
@@ -154,37 +154,35 @@ export default function FileList({
                   e.preventDefault();
                   onContextMenu(e, file, "file");
                 }}
-                className={`cursor-pointer transition group border-b border-slate-800/20 ${
-                  isSelected ? "bg-blue-600/30 font-semibold" : "hover:bg-slate-800/50"
+                className={`group cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-sky-500/10 text-sky-200"
+                    : "hover:bg-white/[0.03] text-slate-200"
                 }`}
               >
-                <td className="py-2.5 px-3 flex items-center gap-2.5 text-slate-200 font-medium">
-                  {file.fileType === "image" && token ? (
-                    <img
-                      src={api.getStreamUrl(file.id, token, false)}
-                      alt=""
-                      loading="lazy"
-                      className="w-5 h-5 rounded object-cover flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    getFileIcon(file.fileType, file.extension)
+                <td className="py-2 px-3 flex items-center gap-2.5 truncate max-w-xs sm:max-w-md">
+                  {getFileIcon(file.fileType || "other", file.extension)}
+                  <span className="truncate font-medium">{file.name}</span>
+                  {file.isStarred && (
+                    <Star className="w-3 h-3 text-amber-300 fill-amber-300 flex-shrink-0 ml-1" />
                   )}
-                  <span className="truncate max-w-sm">{file.name}</span>
-                  {file.isStarred && <Star className="w-3 h-3 text-amber-400 fill-amber-400" />}
                 </td>
-                <td className="py-2.5 px-3 text-slate-400 uppercase font-mono hidden sm:table-cell">{file.extension || "FILE"}</td>
-                <td className="py-2.5 px-3 text-slate-400">{formatBytes(file.totalSizeBytes)}</td>
-                <td className="py-2.5 px-3 text-slate-400 hidden sm:table-cell">{formatDate(file.updatedAt)}</td>
-                <td className="py-2.5 px-3 text-right">
+                <td className="py-2 px-3 text-slate-400 uppercase text-[10px] hidden sm:table-cell font-mono">
+                  {file.extension || "FILE"}
+                </td>
+                <td className="py-2 px-3 text-slate-400 font-mono tabular-nums">
+                  {formatBytes(file.totalSizeBytes)}
+                </td>
+                <td className="py-2 px-3 text-slate-400 font-mono tabular-nums hidden sm:table-cell">
+                  {formatDate(file.updatedAt)}
+                </td>
+                <td className="py-2 px-3 text-right">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onContextMenu(e, file, "file");
                     }}
-                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition"
+                    className="p-1 text-slate-400 hover:text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>

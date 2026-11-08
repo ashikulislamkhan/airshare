@@ -128,7 +128,7 @@ export default function SharedPage() {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      className="flex h-screen w-screen bg-[#060b18] overflow-hidden relative select-none"
+      className="flex h-screen w-screen bg-[#090d16] overflow-hidden relative select-none"
     >
       <SelectionBox selectionBox={selectionBox} />
 
@@ -150,7 +150,7 @@ export default function SharedPage() {
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
             <div className="flex items-center gap-2.5">
               <Users className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-white font-semibold text-lg">Shared with Me</h2>
+              <h2 className="text-slate-100 font-medium text-base">Shared with me</h2>
             </div>
             {selectedIds.size > 0 && (
               <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/30">

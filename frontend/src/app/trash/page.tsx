@@ -108,7 +108,7 @@ export default function TrashPage() {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      className="flex h-screen w-screen bg-[#060b18] overflow-hidden relative select-none"
+      className="flex h-screen w-screen bg-[#090d16] overflow-hidden relative select-none"
     >
       <SelectionBox selectionBox={selectionBox} />
 
@@ -131,7 +131,7 @@ export default function TrashPage() {
             <div className="flex items-center gap-2.5">
               <Trash2 className="w-5 h-5 text-rose-400" />
               <div>
-                <h2 className="text-white font-semibold text-lg">Trash</h2>
+                <h2 className="text-slate-100 font-medium text-base">Trash</h2>
                 <p className="text-[11px] text-slate-400">
                   Items in trash can be restored or permanently purged.
                 </p>
@@ -142,19 +142,19 @@ export default function TrashPage() {
             <div className="flex items-center gap-2">
               {selectedIds.size > 0 ? (
                 <>
-                  <span className="text-xs font-semibold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/30">
+                  <span className="text-xs font-medium text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-md border border-rose-500/20 font-mono tabular-nums">
                     {selectedIds.size} selected
                   </span>
                   <button
                     onClick={() => handleRestoreSelected()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold transition active:scale-95 shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-medium transition-colors"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Restore ({selectedIds.size})</span>
                   </button>
                   <button
                     onClick={() => handlePermanentDeleteSelected()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold transition active:scale-95 shadow-md shadow-rose-600/25"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Delete Forever</span>
