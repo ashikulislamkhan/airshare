@@ -1,6 +1,6 @@
 import { api } from "./api";
-import { db } from "./firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "./firebase";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 // 19 MB chunk size: safely below Telegram Bot API's 20 MB download & 50 MB upload limits
 export const CHUNK_SIZE_BYTES = 19 * 1024 * 1024;
@@ -15,10 +15,11 @@ export interface UploadProgressCallback {
     speedBytesPerSec: number;
     currentChunkIndex: number;
     totalChunks: number;
+    fileId?: string;
   }): void;
 }
 
-interface UploadedChunkResult {
+export interface UploadedChunkResult {
   chunkIndex: number;
   startByte: number;
   endByte: number;
@@ -33,12 +34,23 @@ export class DirectCloudRunUploader {
   private onProgress?: UploadProgressCallback;
   private abortController: AbortController;
   private isPaused: boolean = false;
+  private existingFileId?: string;
 
-  constructor(file: File, folderId: string | null = null, onProgress?: UploadProgressCallback) {
+  // Global rate limit coordination across concurrent tasks/chunks
+  private static rateLimitCooldownUntil: number = 0;
+  private static lastTelegramDispatchTime: number = 0;
+
+  constructor(
+    file: File,
+    folderId: string | null = null,
+    onProgress?: UploadProgressCallback,
+    existingFileId?: string
+  ) {
     this.file = file;
     this.folderId = folderId;
     this.onProgress = onProgress;
     this.abortController = new AbortController();
+    this.existingFileId = existingFileId;
   }
 
   public pause() {
@@ -48,16 +60,6 @@ export class DirectCloudRunUploader {
 
   public async start(): Promise<string> {
     const totalSize = this.file.size;
-
-    // Step 1: Initialize metadata directly in Firestore
-    const initResponse = await api.initFileUpload({
-      name: this.file.name,
-      totalSizeBytes: totalSize,
-      folderId: this.folderId,
-      mimeType: this.file.type || undefined,
-    });
-
-    const fileId = initResponse.file.id;
     const chunkSize = CHUNK_SIZE_BYTES;
     const totalChunks = Math.max(1, Math.ceil(totalSize / chunkSize));
 
@@ -67,8 +69,70 @@ export class DirectCloudRunUploader {
       "https://airshare-storage.ashikkhaninc.workers.dev"
     ).replace(/\/$/, "");
 
-    // Track progress across parallel streams
+    // ─────────────────────────────────────────────────────────────
+    // Step 1: Check for existing incomplete file in Firestore to resume
+    // ─────────────────────────────────────────────────────────────
+    let fileId = this.existingFileId;
+    let existingChunks: UploadedChunkResult[] = [];
+
+    if (fileId) {
+      try {
+        const snap = await getDoc(doc(db, "files", fileId));
+        if (snap.exists()) {
+          const data = snap.data();
+          existingChunks = (data.chunks || []) as UploadedChunkResult[];
+        }
+      } catch (e) {
+        console.warn("Could not load existing file for resume:", e);
+      }
+    } else if (auth.currentUser) {
+      // Find matching in-progress file created recently
+      try {
+        const q = query(
+          collection(db, "files"),
+          where("ownerUid", "==", auth.currentUser.uid),
+          where("name", "==", this.file.name),
+          where("totalSizeBytes", "==", totalSize),
+          where("isTrash", "==", false)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const candidate = snapshot.docs[0];
+          const data = candidate.data();
+          if (data.status === "uploading" || !data.telegramFileId) {
+            fileId = candidate.id;
+            existingChunks = (data.chunks || []) as UploadedChunkResult[];
+            console.log(`AirShare: Resuming existing file ${fileId} with ${existingChunks.length} existing parts.`);
+          }
+        }
+      } catch (e) {
+        console.warn("Resume scan error:", e);
+      }
+    }
+
+    // If no existing file found to resume, initialize fresh file record
+    if (!fileId) {
+      const initResponse = await api.initFileUpload({
+        name: this.file.name,
+        totalSizeBytes: totalSize,
+        folderId: this.folderId,
+        mimeType: this.file.type || undefined,
+      });
+      fileId = initResponse.file.id;
+    }
+
+    // Populate uploadedChunks array from existing chunks
+    const uploadedChunks: (UploadedChunkResult | undefined)[] = new Array(totalChunks).fill(undefined);
     const chunkBytesUploaded = new Array<number>(totalChunks).fill(0);
+
+    for (const chunk of existingChunks) {
+      if (chunk && chunk.chunkIndex < totalChunks && chunk.telegramFileId) {
+        uploadedChunks[chunk.chunkIndex] = chunk;
+        const partSize = Math.min(chunkSize, totalSize - chunk.chunkIndex * chunkSize);
+        chunkBytesUploaded[chunk.chunkIndex] = partSize;
+      }
+    }
+
     let lastTime = Date.now();
     let bytesSinceLastTime = 0;
     let smoothedSpeed = 0;
@@ -92,26 +156,50 @@ export class DirectCloudRunUploader {
           totalBytes: totalSize,
           percent: Math.min(99, Math.round((currentUploaded / totalSize) * 100)),
           speedBytesPerSec: smoothedSpeed,
-          currentChunkIndex: chunkBytesUploaded.filter((b) => b > 0).length,
+          currentChunkIndex: uploadedChunks.filter(Boolean).length,
           totalChunks,
+          fileId,
         });
       }
     };
 
-    // Step 2: Upload single chunk with robust retry & 429 rate-limit backoff
+    // Initial progress notification with already-uploaded chunk progress
+    notifyProgress(0);
+
+    // ─────────────────────────────────────────────────────────────
+    // Step 2: Upload single chunk with Telegram rate pacing & 429 cooldown
+    // ─────────────────────────────────────────────────────────────
     const uploadSingleChunk = async (chunkIndex: number): Promise<UploadedChunkResult> => {
+      // If already uploaded and saved in Firestore, reuse it immediately
+      if (uploadedChunks[chunkIndex]?.telegramFileId) {
+        return uploadedChunks[chunkIndex]!;
+      }
+
       const start = chunkIndex * chunkSize;
       const end = Math.min(start + chunkSize, totalSize);
       const partSize = end - start;
       const chunkBlob = this.file.slice(start, end);
 
       let attempt = 0;
-      const MAX_ATTEMPTS = 6;
+      const MAX_NON_429_ATTEMPTS = 5;
 
-      while (attempt < MAX_ATTEMPTS) {
+      while (attempt < MAX_NON_429_ATTEMPTS) {
         if (this.isPaused) throw new Error("Upload cancelled or aborted.");
-        attempt++;
-        let waitTimeMs = 1000 * Math.pow(1.5, attempt);
+
+        // Wait out any active Telegram rate-limit cooldown
+        while (Date.now() < DirectCloudRunUploader.rateLimitCooldownUntil) {
+          if (this.isPaused) throw new Error("Upload cancelled or aborted.");
+          const waitMs = Math.min(1000, DirectCloudRunUploader.rateLimitCooldownUntil - Date.now());
+          await new Promise((res) => setTimeout(res, waitMs));
+        }
+
+        // Pacing: ensure minimum gap between chunk upload dispatches (Telegram ~20 msg/min limit)
+        const now = Date.now();
+        const timeSinceLast = now - DirectCloudRunUploader.lastTelegramDispatchTime;
+        if (timeSinceLast < 2200) {
+          await new Promise((res) => setTimeout(res, 2200 - timeSinceLast));
+        }
+        DirectCloudRunUploader.lastTelegramDispatchTime = Date.now();
 
         try {
           let lastLoaded = 0;
@@ -119,7 +207,7 @@ export class DirectCloudRunUploader {
           const result = await new Promise<{ file_id: string; message_id?: number }>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open("POST", `${WORKER_URL}/api/upload-chunk`);
-            xhr.timeout = 180000; // 3 minute timeout per chunk
+            xhr.timeout = 240000; // 4 minute timeout per 19MB chunk
 
             const abortHandler = () => {
               xhr.abort();
@@ -150,13 +238,16 @@ export class DirectCloudRunUploader {
                   reject(new Error("Invalid worker response"));
                 }
               } else if (xhr.status === 429) {
+                let retryAfterSec = 30;
                 try {
                   const data = JSON.parse(xhr.responseText);
                   if (data.retryAfter) {
-                    waitTimeMs = (data.retryAfter + 1) * 1000;
+                    retryAfterSec = Number(data.retryAfter);
                   }
                 } catch (e) {}
-                reject(new Error("Telegram rate limit (429)"));
+                // Trigger global cooldown without burning regular network attempts
+                DirectCloudRunUploader.rateLimitCooldownUntil = Date.now() + (retryAfterSec + 2) * 1000;
+                reject(new Error(`Telegram rate limit (429) — backing off for ${retryAfterSec + 2}s`));
               } else {
                 reject(new Error(`Worker error (${xhr.status}): ${xhr.responseText}`));
               }
@@ -193,58 +284,79 @@ export class DirectCloudRunUploader {
           };
         } catch (err: any) {
           if (this.isPaused) throw err;
-          console.warn(`Chunk ${chunkIndex + 1}/${totalChunks} retry ${attempt}/${MAX_ATTEMPTS}:`, err.message || err);
-          if (attempt >= MAX_ATTEMPTS) {
-            this.isPaused = true; // Signal all concurrent workers to stop
+          const is429 = err.message && err.message.includes("429");
+          if (!is429) {
+            attempt++;
+          }
+          console.warn(
+            `Chunk ${chunkIndex + 1}/${totalChunks} ${is429 ? "rate-limited" : `attempt ${attempt}/${MAX_NON_429_ATTEMPTS}`}:`,
+            err.message || err
+          );
+
+          if (attempt >= MAX_NON_429_ATTEMPTS) {
+            this.isPaused = true;
             this.abortController.abort();
             throw err;
           }
-          await new Promise((res) => setTimeout(res, waitTimeMs));
+
+          if (is429) {
+            // Wait for cooldown
+            const waitMs = Math.max(2000, DirectCloudRunUploader.rateLimitCooldownUntil - Date.now());
+            await new Promise((res) => setTimeout(res, waitMs));
+          } else {
+            await new Promise((res) => setTimeout(res, 2000 * attempt));
+          }
         }
       }
-      throw new Error(`Failed to upload chunk ${chunkIndex + 1}/${totalChunks} after ${MAX_ATTEMPTS} attempts.`);
+
+      throw new Error(`Failed to upload chunk ${chunkIndex + 1}/${totalChunks}.`);
     };
 
-    // Step 3: Concurrency Worker Pool (Adaptive 2 streams for huge files to prevent Telegram 429)
-    const CONCURRENCY = totalChunks > 15 ? 2 : 3;
-    const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i);
-    const uploadedChunks: UploadedChunkResult[] = new Array(totalChunks);
+    // ─────────────────────────────────────────────────────────────
+    // Step 3: Concurrency Worker Pool
+    // For large files (> 5 chunks), CONCURRENCY = 1 guarantees strict ordering and zero Telegram 429 flood
+    // ─────────────────────────────────────────────────────────────
+    const CONCURRENCY = totalChunks > 5 ? 1 : 2;
+    const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i).filter(
+      (idx) => !uploadedChunks[idx]?.telegramFileId
+    );
 
     const pool = async () => {
       while (chunkIndices.length > 0) {
         if (this.isPaused) throw new Error("Upload paused or stopped.");
         const nextIndex = chunkIndices.shift();
         if (nextIndex === undefined) break;
+
         const res = await uploadSingleChunk(nextIndex);
         uploadedChunks[nextIndex] = res;
 
-        // Incrementally save progress to Firestore every 3 chunks
-        const finishedCount = uploadedChunks.filter(Boolean).length;
-        if (finishedCount % 3 === 0 || finishedCount === totalChunks) {
-          try {
-            const fileRef = doc(db, "files", fileId);
-            await updateDoc(fileRef, {
-              status: finishedCount === totalChunks ? "completed" : "uploading",
-              telegramFileId: uploadedChunks[0]?.telegramFileId || "",
-              chunks: uploadedChunks.filter(Boolean),
-              updatedAt: Date.now(),
-            });
-          } catch (syncErr) {
-            console.warn("Incremental Firestore sync warning:", syncErr);
-          }
+        // Persist progress to Firestore after each chunk so any interrupt can resume!
+        try {
+          const fileRef = doc(db, "files", fileId);
+          await updateDoc(fileRef, {
+            status: "uploading",
+            telegramFileId: uploadedChunks[0]?.telegramFileId || "",
+            chunks: uploadedChunks.filter(Boolean),
+            updatedAt: Date.now(),
+          });
+        } catch (syncErr) {
+          console.warn("Incremental Firestore sync warning:", syncErr);
         }
       }
     };
 
-    const workers = Array.from({ length: Math.min(CONCURRENCY, totalChunks) }, () => pool());
+    const workers = Array.from({ length: Math.min(CONCURRENCY, chunkIndices.length || 1) }, () => pool());
     await Promise.all(workers);
 
-    // Step 4: Finalize file record in Firestore
+    // ─────────────────────────────────────────────────────────────
+    // Step 4: Finalize file record in Firestore as completed
+    // ─────────────────────────────────────────────────────────────
+    const finalizedChunks = uploadedChunks.filter((c): c is UploadedChunkResult => Boolean(c));
     const fileRef = doc(db, "files", fileId);
     await updateDoc(fileRef, {
       status: "completed",
-      telegramFileId: uploadedChunks[0]?.telegramFileId || "",
-      chunks: uploadedChunks,
+      telegramFileId: finalizedChunks[0]?.telegramFileId || "",
+      chunks: finalizedChunks,
       updatedAt: Date.now(),
     });
 
@@ -256,6 +368,7 @@ export class DirectCloudRunUploader {
         speedBytesPerSec: smoothedSpeed,
         currentChunkIndex: totalChunks,
         totalChunks,
+        fileId,
       });
     }
 

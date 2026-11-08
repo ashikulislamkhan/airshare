@@ -9,12 +9,13 @@ import {
   AlertCircle, 
   Pause, 
   FileText, 
-  Loader2 
+  Loader2,
+  RotateCcw 
 } from "lucide-react";
 import { useTransfer } from "../../context/TransferContext";
 
 export default function UploadTray() {
-  const { uploadTasks, clearCompletedUploads, pauseUpload, isTrayOpen, setIsTrayOpen } = useTransfer();
+  const { uploadTasks, clearCompletedUploads, pauseUpload, retryUpload, isTrayOpen, setIsTrayOpen } = useTransfer();
   const [minimized, setMinimized] = useState(false);
   const [persistentSpeed, setPersistentSpeed] = useState<number>(0);
 
@@ -56,11 +57,17 @@ export default function UploadTray() {
         <div className="flex items-center gap-2">
           {activeCount > 0 ? (
             <Loader2 className="w-3.5 h-3.5 text-sky-400 animate-spin" />
+          ) : uploadTasks.some((t) => t.status === "error") ? (
+            <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
           ) : (
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
           )}
           <span className="text-xs font-medium text-slate-200">
-            {activeCount > 0 ? `Uploading ${activeCount} item${activeCount > 1 ? "s" : ""}` : "Uploads complete"}
+            {activeCount > 0
+              ? `Uploading ${activeCount} item${activeCount > 1 ? "s" : ""}`
+              : uploadTasks.some((t) => t.status === "error")
+              ? "Upload interrupted"
+              : "Uploads complete"}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -135,6 +142,16 @@ export default function UploadTray() {
                     title="Pause"
                   >
                     <Pause className="w-3 h-3" />
+                  </button>
+                )}
+                {task.status === "error" && (
+                  <button
+                    onClick={() => retryUpload(task.id)}
+                    className="flex items-center gap-1 text-sky-400 hover:text-sky-300 transition-colors font-medium cursor-pointer"
+                    title="Resume upload from last saved chunk"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Resume</span>
                   </button>
                 )}
               </div>

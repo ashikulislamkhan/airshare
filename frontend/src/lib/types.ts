@@ -87,6 +87,7 @@ export interface AirShareShare {
 
 export interface UploadTask {
   id: string;
+  fileId?: string;
   file: File;
   folderId: string | null;
   progressPercent: number;

@@ -10,6 +10,7 @@ interface TransferContextType {
   addUploads: (files: FileList | File[], folderId: string | null) => void;
   clearCompletedUploads: () => void;
   pauseUpload: (id: string) => void;
+  retryUpload: (id: string) => void;
   isTrayOpen: boolean;
   setIsTrayOpen: (open: boolean) => void;
 }
@@ -20,6 +21,7 @@ const TransferContext = createContext<TransferContextType>({
   addUploads: () => {},
   clearCompletedUploads: () => {},
   pauseUpload: () => {},
+  retryUpload: () => {},
   isTrayOpen: false,
   setIsTrayOpen: () => {},
 });
@@ -39,6 +41,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
             t.id === task.id
               ? {
                   ...t,
+                  fileId: progress.fileId || t.fileId,
                   uploadedBytes: progress.uploadedBytes,
                   progressPercent: progress.percent,
                   speedBytesPerSec: progress.speedBytesPerSec,
@@ -48,20 +51,21 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
               : t
           )
         );
-      }
+      },
+      task.fileId
     );
 
     try {
       setUploadTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: "uploading" } : t))
+        prev.map((t) => (t.id === task.id ? { ...t, status: "uploading", errorMessage: undefined } : t))
       );
 
-      await uploader.start();
+      const completedFileId = await uploader.start();
 
       setUploadTasks((prev) =>
         prev.map((t) =>
           t.id === task.id
-            ? { ...t, status: "completed", progressPercent: 100 }
+            ? { ...t, status: "completed", fileId: completedFileId, progressPercent: 100 }
             : t
         )
       );
@@ -112,6 +116,12 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const retryUpload = useCallback((taskId: string) => {
+    const task = uploadTasks.find((t) => t.id === taskId);
+    if (!task) return;
+    processUploadQueue(task);
+  }, [uploadTasks]);
+
   const clearCompletedUploads = () => {
     setUploadTasks((prev) => prev.filter((t) => t.status !== "completed"));
   };
@@ -124,6 +134,7 @@ export function TransferProvider({ children }: { children: React.ReactNode }) {
         addUploads,
         clearCompletedUploads,
         pauseUpload,
+        retryUpload,
         isTrayOpen,
         setIsTrayOpen,
       }}

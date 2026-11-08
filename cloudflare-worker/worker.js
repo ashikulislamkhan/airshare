@@ -1,11 +1,12 @@
 /**
- * AirShare Cloudflare Worker Edge Gateway v2.0
+ * AirShare Cloudflare Worker Edge Gateway v2.1
  * Zero-Dollar Serverless Cloud Storage Backend
  * 
  * Capabilities:
  * - Chunk upload proxy to Telegram Bot API (sendDocument)
- * - Single chunk streaming with exact MIME types, Content-Disposition, and byte ranges
- * - Live multi-chunk concatenation streaming via TransformStream for seamless video/audio playback and unified downloads
+ * - HTTP Byte-Range support (206 Partial Content) for instant video/audio seeking
+ * - Live multi-chunk concatenation streaming via TransformStream with Range support
+ * - Exact MIME types, UTF-8 filenames, and Content-Disposition headers
  */
 
 const MIME_MAP = {
@@ -76,7 +77,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Global CORS headers for GitHub Pages and web clients
+    // Global CORS headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -104,8 +105,8 @@ export default {
     if (url.pathname === "/" || url.pathname === "/health") {
       return new Response(
         JSON.stringify({
-          status: "AirShare Edge Storage Active v2.0",
-          concurrency: "parallel",
+          status: "AirShare Edge Storage Active v2.1",
+          byteRangeSeeking: true,
           multiChunkStreaming: true,
           timestamp: Date.now(),
         }),
@@ -130,7 +131,6 @@ export default {
           });
         }
 
-        // Forward multipart to Telegram Bot API sendDocument
         const tgFormData = new FormData();
         tgFormData.append("chat_id", chatId);
         tgFormData.append(
@@ -169,14 +169,11 @@ export default {
           );
         }
 
-        const fileId = tgData.result.document.file_id;
-        const messageId = tgData.result.message_id;
-
         return new Response(
           JSON.stringify({
             status: "success",
-            file_id: fileId,
-            message_id: messageId,
+            file_id: tgData.result.document.file_id,
+            message_id: tgData.result.message_id,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -189,7 +186,8 @@ export default {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Route 3: Stream Single Chunk / Single File
+    // Route 3: Stream Single Chunk / Single File with HTTP Byte Ranges
+    // Supports video/audio seeking via Range: bytes=...
     // ─────────────────────────────────────────────────────────────
     if (url.pathname.startsWith("/api/stream/")) {
       const fileId = url.pathname.replace("/api/stream/", "").split("?")[0];
@@ -212,27 +210,46 @@ export default {
       }
 
       const filePath = infoData.result.file_path;
-      // 2. Stream chunk bytes directly to browser
-      const fileStream = await fetch(`https://api.telegram.org/file/bot${botToken}/${filePath}`);
+      const rangeHeader = request.headers.get("Range");
+
+      // 2. Forward Range header to Telegram file server for instant media seeking
+      const tgHeaders = {};
+      if (rangeHeader) {
+        tgHeaders["Range"] = rangeHeader;
+      }
+
+      const fileStream = await fetch(
+        `https://api.telegram.org/file/bot${botToken}/${filePath}`,
+        { headers: tgHeaders }
+      );
 
       const disposition = isDownload
         ? `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
         : `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 
+      const responseHeaders = {
+        ...corsHeaders,
+        "Content-Type": mimeType,
+        "Content-Disposition": disposition,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      };
+
+      if (fileStream.headers.has("Content-Range")) {
+        responseHeaders["Content-Range"] = fileStream.headers.get("Content-Range");
+      }
+      if (fileStream.headers.has("Content-Length")) {
+        responseHeaders["Content-Length"] = fileStream.headers.get("Content-Length");
+      }
+
       return new Response(fileStream.body, {
-        status: fileStream.status,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": mimeType,
-          "Content-Disposition": disposition,
-          "Accept-Ranges": "bytes",
-          "Cache-Control": "public, max-age=31536000, immutable",
-        },
+        status: fileStream.status, // 206 Partial Content when seeking!
+        headers: responseHeaders,
       });
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Route 4: Live Multi-Chunk Concatenation Streaming
+    // Route 4: Live Multi-Chunk Concatenation Streaming with Seeking
     // Streams multiple Telegram chunks seamlessly as ONE single unified file!
     // ─────────────────────────────────────────────────────────────
     if (url.pathname === "/api/stream-file") {
@@ -270,14 +287,34 @@ export default {
         ? `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
         : `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 
-      // Use TransformStream to pipe all chunks sequentially into one continuous stream
+      // Parse HTTP Range header (e.g. Range: bytes=150000000-)
+      const rangeHeader = request.headers.get("Range");
+      let startByte = 0;
+      let isPartial = false;
+
+      if (rangeHeader) {
+        const match = rangeHeader.match(/bytes=(\d+)-/);
+        if (match) {
+          startByte = parseInt(match[1], 10);
+          isPartial = true;
+        }
+      }
+
+      // 19.5 MB chunk size in bytes
+      const CHUNK_SIZE = 19.5 * 1024 * 1024;
+      const totalEstimatedBytes = Math.round(chunkIds.length * CHUNK_SIZE);
+      const startChunkIdx = Math.min(chunkIds.length - 1, Math.floor(startByte / CHUNK_SIZE));
+      const offsetInFirstChunk = Math.round(startByte - (startChunkIdx * CHUNK_SIZE));
+
       const { readable, writable } = new TransformStream();
 
-      // Background pipe loop
+      // Background pipe loop: pipes chunks sequentially starting from the seek position
       (async () => {
         const writer = writable.getWriter();
         try {
-          for (const chunkId of chunkIds) {
+          for (let i = startChunkIdx; i < chunkIds.length; i++) {
+            const chunkId = chunkIds[i];
+
             // 1. Fetch Telegram file path
             const infoRes = await fetch(
               `https://api.telegram.org/bot${botToken}/getFile?file_id=${chunkId}`
@@ -285,13 +322,18 @@ export default {
             const infoData = await infoRes.json();
 
             if (!infoData.ok || !infoData.result?.file_path) {
-              console.warn(`Failed to resolve chunk ${chunkId}:`, infoData);
               continue;
             }
 
-            // 2. Fetch chunk stream and pipe chunks to writer
+            // 2. Fetch chunk stream (forwarding range offset for the first seeked chunk)
+            const tgHeaders = {};
+            if (i === startChunkIdx && offsetInFirstChunk > 0) {
+              tgHeaders["Range"] = `bytes=${offsetInFirstChunk}-`;
+            }
+
             const fileRes = await fetch(
-              `https://api.telegram.org/file/bot${botToken}/${infoData.result.file_path}`
+              `https://api.telegram.org/file/bot${botToken}/${infoData.result.file_path}`,
+              { headers: tgHeaders }
             );
 
             if (fileRes.body) {
@@ -303,21 +345,28 @@ export default {
               }
             }
           }
-        } catch (pipeErr) {
-          console.error("Multi-chunk streaming error:", pipeErr);
+        } catch (err) {
+          console.error("Multi-chunk stream pipe error:", err);
         } finally {
           await writer.close();
         }
       })();
 
+      const streamHeaders = {
+        ...corsHeaders,
+        "Content-Type": mimeType,
+        "Content-Disposition": disposition,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "public, max-age=86400",
+      };
+
+      if (isPartial) {
+        streamHeaders["Content-Range"] = `bytes ${startByte}-${totalEstimatedBytes - 1}/${totalEstimatedBytes}`;
+      }
+
       return new Response(readable, {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": mimeType,
-          "Content-Disposition": disposition,
-          "Accept-Ranges": "bytes",
-          "Cache-Control": "public, max-age=86400",
-        },
+        status: isPartial ? 206 : 200,
+        headers: streamHeaders,
       });
     }
 
