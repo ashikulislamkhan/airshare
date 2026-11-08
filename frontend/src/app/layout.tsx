@@ -6,19 +6,22 @@ import UploadTray from "../components/transfer/UploadTray";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import PWARegister from "../components/common/PWARegister";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ashikulislamkhan.github.io/airshare/"),
   title: "AirShare",
   description: "High-Performance Cloud Storage with Unlimited Capacity",
-  manifest: "/manifest.json",
+  manifest: `${basePath}/manifest.json`,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "AirShare",
   },
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/apple-touch-icon.png",
+    icon: `${basePath}/logo.png`,
+    shortcut: `${basePath}/favicon.ico`,
+    apple: `${basePath}/apple-touch-icon.png`,
   },
   verification: {
     google: "ZbyOG2gq1udf0XlCt9y9IuxT7FfFA_2yHXnyoWMHguM",

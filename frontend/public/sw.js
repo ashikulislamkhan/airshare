@@ -1,11 +1,12 @@
-const CACHE_NAME = 'airshare-pwa-v1';
+const CACHE_NAME = 'airshare-pwa-v2';
 const PRECACHE_ASSETS = [
-  '/',
-  '/drive',
-  '/manifest.json',
-  '/logo.png',
-  '/icon-192.png',
-  '/icon-512.png'
+  './',
+  './drive/',
+  './manifest.json',
+  './logo.png',
+  './favicon.ico',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
