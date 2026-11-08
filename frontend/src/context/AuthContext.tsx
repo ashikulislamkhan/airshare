@@ -36,7 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         try {
           const profile = await api.syncUser();
-          setAirshareUser(profile.user);
+          if (profile?.user) {
+            setAirshareUser(profile.user);
+          }
         } catch (err) {
           console.warn("Failed to sync user with backend:", err);
         }

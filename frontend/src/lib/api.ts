@@ -13,7 +13,7 @@ import {
   limit,
   increment
 } from "firebase/firestore";
-import { AirShareFile, AirShareFolder, AirShareShare } from "./types";
+import { AirShareFile, AirShareFolder, AirShareShare, AirShareUser } from "./types";
 
 const WORKER_URL = (
   process.env.NEXT_PUBLIC_WORKER_URL || 
@@ -49,7 +49,7 @@ export const api = {
   // ─────────────────────────────────────────────────────────────
   // USER PROFILE
   // ─────────────────────────────────────────────────────────────
-  async syncUser() {
+  async syncUser(): Promise<{ user: AirShareUser } | null> {
     const user = auth.currentUser;
     if (!user) return null;
     const userRef = doc(db, "users", user.uid);
@@ -61,9 +61,9 @@ export const api = {
         photoURL: user.photoURL || "",
         lastLoginAt: now,
       });
-      return snap.data();
+      return { user: { ...snap.data(), lastLoginAt: now } as AirShareUser };
     } else {
-      const newUser = {
+      const newUser: AirShareUser = {
         uid: user.uid,
         email: user.email || "",
         displayName: user.displayName || "User",
@@ -73,7 +73,7 @@ export const api = {
         lastLoginAt: now,
       };
       await setDoc(userRef, newUser);
-      return newUser;
+      return { user: newUser };
     }
   },
 
@@ -391,6 +391,7 @@ export const api = {
       allowDownload: payload.allowDownload,
       sharedWithEmails: payload.sharedWithEmails || [],
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     await setDoc(doc(db, "shares", shareId), shareData);
