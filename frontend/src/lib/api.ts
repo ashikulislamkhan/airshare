@@ -292,7 +292,11 @@ export const api = {
       }
 
       // Single chunk file
-      const tgId = file.telegramFileId || file.chunks?.[0]?.telegramFileId || file.id;
+      const tgId = file.telegramFileId || file.chunks?.[0]?.telegramFileId;
+      if (!tgId) {
+        // Incomplete / interrupted file with no storage chunk saved
+        return "";
+      }
       const params = new URLSearchParams({
         name: file.name,
         mime: file.mimeType || "",
@@ -301,11 +305,16 @@ export const api = {
       return `${WORKER_URL}/api/stream/${tgId}?${params.toString()}`;
     }
 
-    // Direct string ID
+    // Direct string ID (only if valid Telegram ID, not UUID)
+    if (!fileOrId || fileOrId.includes("-")) return "";
     return `${WORKER_URL}/api/stream/${fileOrId}${download ? "?download=1" : ""}`;
   },
 
   async downloadFile(file: AirShareFile, onProgress?: (percent: number) => void): Promise<void> {
+    if (!file.telegramFileId && (!file.chunks || file.chunks.length === 0)) {
+      alert("This file upload was interrupted and has no storage chunks. Please delete or re-upload it.");
+      return;
+    }
     try {
       // 1. Single chunk file download via Blob (guarantees correct filename across origins)
       if (!file.chunks || file.chunks.length <= 1) {
@@ -359,13 +368,15 @@ export const api = {
       console.error("In-browser download error, falling back to direct URL:", err);
       // Fallback to direct window link
       const directUrl = this.getStreamUrl(file, undefined, true);
-      const a = document.createElement("a");
-      a.href = directUrl;
-      a.download = file.name;
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      if (directUrl) {
+        const a = document.createElement("a");
+        a.href = directUrl;
+        a.download = file.name;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     }
   },
 

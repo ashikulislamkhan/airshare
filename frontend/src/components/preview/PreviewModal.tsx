@@ -734,7 +734,37 @@ export default function PreviewModal({ file, onClose }: PreviewModalProps) {
         {loading ? (
           <div className="flex flex-col items-center gap-3 text-slate-400">
             <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-            <p className="text-sm font-medium">Connecting to Telegram MTProto stream engine...</p>
+            <p className="text-sm font-medium">Connecting to Telegram Edge Storage...</p>
+          </div>
+        ) : (!file?.telegramFileId && (!file?.chunks || file.chunks.length === 0)) ? (
+          <div className="flex flex-col items-center justify-center gap-3 text-slate-300 bg-slate-900/90 p-8 rounded-2xl border border-amber-500/30 text-center max-w-md shadow-2xl">
+            <AlertTriangle className="w-12 h-12 text-amber-400" />
+            <p className="text-base font-semibold text-white">Upload Incomplete</p>
+            <p className="text-xs text-slate-400">
+              This file was interrupted during upload and was not finalized in Telegram storage. No storage parts exist for this file. Please delete it and re-upload.
+            </p>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={async () => {
+                  if (file) {
+                    await api.trashFile(file.id);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("airshare:upload-complete"));
+                    }
+                    onClose();
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl transition shadow cursor-pointer"
+              >
+                Delete File
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         ) : (
           <>

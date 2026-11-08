@@ -183,6 +183,11 @@ export default function FileList({
                   {file.isStarred && (
                     <Star className="w-3 h-3 text-amber-300 fill-amber-300 flex-shrink-0 ml-1" />
                   )}
+                  {!file.telegramFileId && (!file.chunks || file.chunks.length === 0) && (
+                    <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-1.5 py-0.2 rounded font-mono ml-2 flex-shrink-0">
+                      Incomplete
+                    </span>
+                  )}
                 </td>
                 <td className="py-2 px-3 text-slate-400 uppercase text-[10px] hidden sm:table-cell font-mono">
                   {file.extension || "FILE"}

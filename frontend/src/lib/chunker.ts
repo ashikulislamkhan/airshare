@@ -217,6 +217,22 @@ export class DirectCloudRunUploader {
         if (nextIndex === undefined) break;
         const res = await uploadSingleChunk(nextIndex);
         uploadedChunks[nextIndex] = res;
+
+        // Incrementally save progress to Firestore every 3 chunks
+        const finishedCount = uploadedChunks.filter(Boolean).length;
+        if (finishedCount % 3 === 0 || finishedCount === totalChunks) {
+          try {
+            const fileRef = doc(db, "files", fileId);
+            await updateDoc(fileRef, {
+              status: finishedCount === totalChunks ? "completed" : "uploading",
+              telegramFileId: uploadedChunks[0]?.telegramFileId || "",
+              chunks: uploadedChunks.filter(Boolean),
+              updatedAt: Date.now(),
+            });
+          } catch (syncErr) {
+            console.warn("Incremental Firestore sync warning:", syncErr);
+          }
+        }
       }
     };
 

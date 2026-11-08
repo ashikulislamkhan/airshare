@@ -219,6 +219,12 @@ export default function FileGrid({
                         <Star className="w-3 h-3 text-amber-300 fill-amber-300" />
                       </div>
                     )}
+
+                    {!file.telegramFileId && (!file.chunks || file.chunks.length === 0) && (
+                      <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-amber-500/20 backdrop-blur-sm border border-amber-500/30 text-[10px] text-amber-300 font-mono">
+                        Incomplete
+                      </div>
+                    )}
                   </div>
 
                   {/* Info Footer */}
