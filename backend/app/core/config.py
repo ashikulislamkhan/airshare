@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # CORS (Whitelisted Vercel frontend domains & local dev)
-    CORS_ORIGINS: str = "http://localhost:3000,https://*.vercel.app,https://airshare.vercel.app"
+    CORS_ORIGINS: str = "http://localhost:3000,https://ashikulislamkhan.github.io,https://*.github.io,https://*.vercel.app"
 
     @property
     def cors_origins_list(self) -> List[str]:
